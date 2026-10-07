@@ -2,647 +2,1196 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>3D Interior Design Visualization Tool</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #1b1d23; color: #e8e6e1; overflow: hidden; height: 100vh; }
-  #app { display: flex; height: 100vh; }
-
-  /* Sidebar */
-  #sidebar { width: 280px; background: #22242c; border-right: 1px solid #33353f; display: flex; flex-direction: column; flex-shrink: 0; }
-  #sidebar-head { padding: 16px 16px 0; }
-  #sidebar-head h1 { font-size: 15px; letter-spacing: .04em; color: #cdb98f; }
-  #sidebar-head .sub { font-size: 11px; color: #8a8d99; margin-bottom: 12px; }
-
-  #tabs { display: flex; border-bottom: 1px solid #33353f; }
-  .tab { flex: 1; text-align: center; padding: 10px 4px; font-size: 12px; cursor: pointer; color: #8a8d99; border-bottom: 2px solid transparent; }
-  .tab.active { color: #cdb98f; border-bottom: 2px solid #cdb98f; }
-  .tab-panel { display: none; padding: 14px 16px; overflow-y: auto; flex: 1; }
-  .tab-panel.active { display: block; }
-
-  h2.section { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #8a8d99; margin: 16px 0 8px; }
-  h2.section:first-child { margin-top: 0; }
-  .row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; gap: 8px; }
-  .row label { font-size: 12px; color: #c7c5be; flex: 1; }
-  .row input[type=range] { flex: 1.4; accent-color: #cdb98f; }
-  .row input[type=color] { width: 34px; height: 24px; border: none; background: none; border-radius: 4px; cursor: pointer; }
-  .row select { flex: 1.4; background: #2a2c35; color: #e8e6e1; border: 1px solid #383a45; border-radius: 5px; padding: 4px; font-size: 11.5px; }
-  .val { font-size: 11px; color: #8a8d99; width: 34px; text-align: right; }
-
-  .swatches { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-  .swatch { width: 22px; height: 22px; border-radius: 5px; cursor: pointer; border: 2px solid transparent; }
-  .swatch.active { border-color: #cdb98f; }
-
-  .catalog-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: #2a2c35; border: 1px solid #383a45; border-radius: 8px; margin-bottom: 6px; cursor: pointer; transition: background .15s; font-size: 12.5px; }
-  .catalog-item:hover { background: #333540; border-color: #cdb98f55; }
-  .catalog-item .plus { width: 20px; height: 20px; border-radius: 50%; background: #cdb98f; color: #1b1d23; font-weight: bold; display: flex; align-items: center; justify-content: center; font-size: 14px; }
-
-  button.primary { width: 100%; padding: 9px; margin-top: 6px; background: #cdb98f; border: none; color: #1b1d23; font-weight: 600; border-radius: 6px; cursor: pointer; font-size: 12.5px; }
-  button.primary:hover { background: #ddc9a0; }
-
-  /* Viewport */
-  #viewport { flex: 1; position: relative; }
-  canvas { display: block; }
-  #hint { position: absolute; bottom: 14px; left: 14px; font-size: 11px; color: #ffffffcc; background: #00000066; padding: 7px 11px; border-radius: 6px; pointer-events: none; line-height: 1.5; }
-
-  /* Inspector */
-  #inspector { width: 250px; background: #22242c; border-left: 1px solid #33353f; padding: 16px; overflow-y: auto; flex-shrink: 0; }
-  #noSelection { font-size: 12.5px; color: #6d6f7a; margin-top: 8px; line-height: 1.5; }
-  #selectedName { font-size: 14px; color: #cdb98f; margin-bottom: 10px; font-weight: 600; }
-  button#deleteBtn { width: 100%; padding: 8px; margin-top: 12px; background: #4a2c2c; border: 1px solid #6e3b3b; color: #e8b4b4; border-radius: 6px; cursor: pointer; font-size: 12.5px; }
-  button#deleteBtn:hover { background: #5c3535; }
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atelier — 3D Interior Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+} }
+</script>
 </head>
 <body>
-<div id="app">
+<div id="viewport"></div>
 
-  <div id="sidebar">
-    <div id="sidebar-head">
-      <h1>ROOM DESIGNER</h1>
-      <div class="sub">3D Interior Design Visualization Tool</div>
+<div id="loader"><div class="loader-inner">
+  <div class="loader-mark" data-icon="logo"></div>
+  <div class="loader-name">Atelier</div>
+  <div class="loader-text">Setting up your studio…</div>
+</div></div>
+
+<header id="topbar" class="glass">
+  <div class="brand">
+    <button class="icon-btn only-mobile" id="panelToggle" data-icon="menu"></button>
+    <div class="logo" data-icon="logo"></div>
+    <div class="brand-text"><span class="brand-name">Atelier</span><span class="brand-sub">3D Interior Studio</span></div>
+  </div>
+  <div class="tools">
+    <button class="icon-btn" id="undoBtn" data-icon="undo" data-tip="Undo (Ctrl+Z)"></button>
+    <button class="icon-btn" id="redoBtn" data-icon="redo" data-tip="Redo (Ctrl+Y)"></button>
+    <span class="divider"></span>
+    <div class="seg" id="viewSeg">
+      <button data-view="3d" class="active" data-tip="Perspective (1)"><span data-icon="cube"></span><span class="label">3D</span></button>
+      <button data-view="top" data-tip="Top (2)"><span data-icon="top"></span><span class="label">Top</span></button>
+      <button data-view="front" data-tip="Front (3)"><span data-icon="front"></span><span class="label">Front</span></button>
+      <button data-view="eye" data-tip="Eye level (4)"><span data-icon="eye"></span><span class="label">Eye</span></button>
     </div>
+    <button class="icon-btn" id="spinBtn" data-icon="spin" data-tip="Turntable"></button>
+    <button class="icon-btn" id="wallsBtn" data-icon="walls" data-tip="Walls: auto cutaway (W)"><span class="badge" id="wallsBadge">AUTO</span></button>
+    <button class="icon-btn on" id="snapBtn" data-icon="magnet" data-tip="Snap to grid (G)"></button>
+  </div>
+  <div class="tools">
+    <button class="icon-btn" id="shotBtn" data-icon="camera" data-tip="Screenshot"></button>
+    <button class="icon-btn hide-sm" id="exportBtn" data-icon="download" data-tip="Export design"></button>
+    <button class="icon-btn hide-sm" id="importBtn" data-icon="upload" data-tip="Import design"></button>
+    <button class="icon-btn" id="themeBtn" data-icon="moon" data-tip="Theme"></button>
+    <button class="icon-btn" id="helpBtn" data-icon="help" data-tip="Shortcuts (?)"></button>
+  </div>
+</header>
 
-    <div id="tabs">
-      <div class="tab active" data-tab="room">Room</div>
-      <div class="tab" data-tab="furniture">Furniture</div>
-      <div class="tab" data-tab="create">Create</div>
-    </div>
+<aside id="panel" class="glass">
+  <nav id="tabs" style="grid-template-columns:repeat(3,1fr)">
+    <button class="tab active" data-tab="catalog"><span data-icon="sofa"></span>Furniture</button>
+    <button class="tab" data-tab="room"><span data-icon="room"></span>Room</button>
+    <button class="tab" data-tab="create"><span data-icon="shapes"></span>Create</button>
+  </nav>
+  <div class="tab-body">
+    <section class="tab-panel active" data-panel="catalog">
+      <div class="search"><span data-icon="search"></span><input id="search" type="search" placeholder="Search furniture…"></div>
+      <div class="chips" id="chips"></div>
+      <div class="catalog-grid" id="catalog"></div>
+      <p class="tip"><span data-icon="bulb"></span>Click to add. Drag objects in the room to move them, Q / E to rotate.</p>
+    </section>
 
-    <div class="tab-panel active" id="tab-room">
-      <h2 class="section">Room Size</h2>
-      <div class="row"><label>Width</label><input id="roomW" type="range" min="4" max="16" step="0.5" value="8"><span class="val" id="roomWVal">8</span></div>
-      <div class="row"><label>Depth</label><input id="roomD" type="range" min="4" max="16" step="0.5" value="8"><span class="val" id="roomDVal">8</span></div>
-      <div class="row"><label>Height</label><input id="roomH" type="range" min="2.4" max="5" step="0.1" value="3"><span class="val" id="roomHVal">3</span></div>
+    <section class="tab-panel" data-panel="room">
+      <div class="section-title">Styles</div>
+      <div class="style-grid" id="styles"></div>
 
-      <h2 class="section">Wall Design</h2>
-      <div class="row"><label>Pattern</label>
-        <select id="wallPattern">
-          <option value="solid">Solid</option>
-          <option value="stripes">Stripes</option>
-          <option value="brick">Brick</option>
-          <option value="dots">Dots</option>
-          <option value="floral">Floral</option>
-        </select>
+      <div class="section-title">Dimensions</div>
+      <div class="stat-row">
+        <div class="stat"><b id="areaStat">42.0</b><span>m² floor area</span></div>
+        <div class="stat"><b id="countStat">0</b><span>objects</span></div>
       </div>
-      <div class="row"><label>Base color</label><input id="wallColor" type="color" value="#e8e2d4"></div>
-      <div class="row"><label>Accent color</label><input id="wallColor2" type="color" value="#cdb98f"></div>
+      <div class="field"><div class="field-top"><label for="roomW">Width</label><output id="roomWVal"></output></div><input type="range" id="roomW" min="3" max="12" step="0.1"></div>
+      <div class="field"><div class="field-top"><label for="roomD">Depth</label><output id="roomDVal"></output></div><input type="range" id="roomD" min="3" max="12" step="0.1"></div>
+      <div class="field"><div class="field-top"><label for="roomH">Height</label><output id="roomHVal"></output></div><input type="range" id="roomH" min="2.4" max="4" step="0.05"></div>
 
-      <h2 class="section">Floor Design</h2>
-      <div class="row"><label>Pattern</label>
-        <select id="floorPattern">
-          <option value="solid">Solid</option>
-          <option value="wood">Wood planks</option>
-          <option value="tile">Tile checker</option>
-          <option value="marble">Marble</option>
-        </select>
+      <div class="section-title">Walls</div>
+      <div class="pattern-grid" id="wallPatterns"></div>
+      <div class="color-row">
+        <label class="color-field"><input type="color" id="wallA"><span>Base</span><code id="wallACode"></code></label>
+        <label class="color-field"><input type="color" id="wallB"><span>Accent</span><code id="wallBCode"></code></label>
       </div>
-      <div class="row"><label>Base color</label><input id="floorColor" type="color" value="#8a5a3b"></div>
-      <div class="row"><label>Accent color</label><input id="floorColor2" type="color" value="#5c3a22"></div>
 
-      <h2 class="section">Lighting</h2>
-      <div class="row"><label>Brightness</label><input id="lightIntensity" type="range" min="0.2" max="2.5" step="0.1" value="1.2"></div>
-      <div class="row"><label>Warmth</label><input id="lightColor" type="color" value="#fff2d9"></div>
-    </div>
-
-    <div class="tab-panel" id="tab-furniture">
-      <h2 class="section">Add From Catalog</h2>
-      <div id="catalog"></div>
-    </div>
-
-    <div class="tab-panel" id="tab-create">
-      <h2 class="section">Build Your Own Object</h2>
-      <div class="row"><label>Shape</label>
-        <select id="customShape">
-          <option value="box">Box</option>
-          <option value="sphere">Sphere</option>
-          <option value="cylinder">Cylinder</option>
-          <option value="cone">Cone</option>
-        </select>
+      <div class="section-title">Floor</div>
+      <div class="pattern-grid" id="floorPatterns"></div>
+      <div class="color-row">
+        <label class="color-field"><input type="color" id="floorA"><span>Base</span><code id="floorACode"></code></label>
+        <label class="color-field"><input type="color" id="floorB"><span>Accent</span><code id="floorBCode"></code></label>
       </div>
-      <div class="row"><label>Width / Diameter</label><input id="customX" type="range" min="0.1" max="2.5" step="0.05" value="0.6"><span class="val" id="customXVal">0.6</span></div>
-      <div class="row"><label>Height</label><input id="customY" type="range" min="0.1" max="2.5" step="0.05" value="0.6"><span class="val" id="customYVal">0.6</span></div>
-      <div class="row"><label>Depth</label><input id="customZ" type="range" min="0.1" max="2.5" step="0.05" value="0.6"><span class="val" id="customZVal">0.6</span></div>
-      <div class="row"><label>Color</label><input id="customColor" type="color" value="#8fb2cd"></div>
-      <div class="row"><label>Name</label><input id="customName" type="text" placeholder="e.g. Side Stool" style="flex:1.4; background:#2a2c35; border:1px solid #383a45; color:#e8e6e1; border-radius:5px; padding:5px; font-size:11.5px;"></div>
-      <button class="primary" id="createObjBtn">+ Create &amp; Place Object</button>
+
+      <div class="section-title">Lighting</div>
+      <div class="field"><div class="field-top"><label for="bright">Brightness</label><output id="brightVal"></output></div><input type="range" id="bright" min="0.3" max="1.8" step="0.05"></div>
+      <div class="field"><div class="field-top"><label for="warmth">Warmth</label><output id="warmthVal"></output></div><input type="range" id="warmth" min="0" max="1" step="0.01"></div>
+      <div class="field-top"><span>Lamps</span></div>
+      <div class="seg full" id="lampSeg"><button data-v="auto" class="active">Auto</button><button data-v="on">On</button><button data-v="off">Off</button></div>
+    </section>
+
+    <section class="tab-panel" data-panel="create">
+      <div class="section-title">Build your own object</div>
+      <div class="seg full" id="shapeSeg">
+        <button data-v="box" class="active">Box</button><button data-v="rounded">Soft</button><button data-v="sphere">Sphere</button><button data-v="cylinder">Cyl</button><button data-v="cone">Cone</button>
+      </div>
+      <div style="height:14px"></div>
+      <div class="field"><div class="field-top"><label for="cW">Width</label><output id="cWVal"></output></div><input type="range" id="cW" min="0.1" max="2.5" step="0.05" value="0.6"></div>
+      <div class="field"><div class="field-top"><label for="cH">Height</label><output id="cHVal"></output></div><input type="range" id="cH" min="0.1" max="2.5" step="0.05" value="0.6"></div>
+      <div class="field"><div class="field-top"><label for="cD">Depth</label><output id="cDVal"></output></div><input type="range" id="cD" min="0.1" max="2.5" step="0.05" value="0.6"></div>
+      <label class="color-field" style="margin-bottom:14px"><input type="color" id="cColor" value="#8fb2cd"><span>Color</span><code id="cColorCode">#8FB2CD</code></label>
+      <input class="text-input" id="cName" type="text" placeholder="Name, e.g. Side stool" maxlength="40">
+      <div style="height:12px"></div>
+      <button class="btn btn-primary btn-block" id="createBtn"><span data-icon="plus"></span>Create &amp; place</button>
+    </section>
+  </div>
+</aside>
+
+<aside id="inspector" class="glass">
+  <div class="insp-head">
+    <div class="insp-ic" id="inspIc"></div>
+    <input class="insp-name" id="inspName" type="text" maxlength="40" aria-label="Object name">
+    <button class="icon-btn sm" id="inspClose" data-icon="x"></button>
+  </div>
+  <div class="insp-meta"><span class="pill" id="inspDims"></span><span class="pill warn" id="inspWarn" hidden>Overlapping</span></div>
+
+  <div class="section-title">Color</div>
+  <div class="swatches" id="swatches"></div>
+  <div class="custom-color"><label class="color-field"><input type="color" id="objColor"><span>Custom</span><code id="objColorCode"></code></label></div>
+
+  <div class="section-title">Finish</div>
+  <div class="finish-grid" id="finishes"></div>
+
+  <div class="section-title">Transform</div>
+  <div class="field"><div class="field-top"><label for="objRot">Rotation</label><output id="objRotVal"></output></div>
+    <div class="rot-row"><button class="icon-btn sm" id="rotL" data-icon="rotL"></button><input type="range" id="objRot" min="-180" max="180" step="1"><button class="icon-btn sm" id="rotR" data-icon="rotR"></button></div></div>
+  <div class="field"><div class="field-top"><label for="objScale">Scale</label><output id="objScaleVal"></output></div><input type="range" id="objScale" min="0.5" max="2" step="0.01"></div>
+  <div class="field"><div class="field-top"><label for="objX">Position X</label><output id="objXVal"></output></div><input type="range" id="objX" min="-6" max="6" step="0.01"></div>
+  <div class="field"><div class="field-top"><label for="objZ">Position Z</label><output id="objZVal"></output></div><input type="range" id="objZ" min="-6" max="6" step="0.01"></div>
+
+  <div class="insp-actions">
+    <button class="btn btn-ghost" id="dupBtn"><span data-icon="copy"></span>Duplicate</button>
+    <button class="btn btn-ghost" id="focusBtn"><span data-icon="focus"></span>Focus</button>
+    <button class="btn btn-danger" id="delBtn"><span data-icon="trash"></span>Delete</button>
+  </div>
+</aside>
+
+<div id="ctxbar" class="glass">
+  <button class="icon-btn" data-act="rotL" data-icon="rotL" data-tip="Rotate left (Q)"></button>
+  <button class="icon-btn" data-act="rotR" data-icon="rotR" data-tip="Rotate right (E)"></button>
+  <span class="sep"></span>
+  <button class="icon-btn" data-act="dup" data-icon="copy" data-tip="Duplicate (Ctrl+D)"></button>
+  <button class="icon-btn" data-act="focus" data-icon="focus" data-tip="Focus (F)"></button>
+  <span class="sep"></span>
+  <button class="icon-btn danger" data-act="del" data-icon="trash" data-tip="Delete (Del)"></button>
+</div>
+
+<div id="timebar" class="glass">
+  <button class="icon-btn" id="playBtn" data-tip="Play day cycle (P)" data-tip-pos="top"></button>
+  <div class="time-read"><span id="timeIcon"></span><output id="timeLabel"></output></div>
+  <input type="range" id="timeSlider" min="0" max="24" step="0.05" aria-label="Time of day">
+</div>
+
+<div id="hint">Left-drag orbit · Right-drag pan · Scroll zoom<br>Press <kbd>?</kbd> for shortcuts</div>
+<div id="toasts"></div>
+<div id="flash"></div>
+<input type="file" id="importFile" accept=".json,application/json" hidden>
+
+<div id="modal" hidden>
+  <div class="modal-card glass">
+    <div class="modal-head"><div><h2>Shortcuts</h2><p>Everything autosaves in your browser.</p></div><button class="icon-btn" id="modalClose" data-icon="x"></button></div>
+    <div class="keys">
+      <div class="key-row"><span>Undo / Redo</span><span><kbd>Ctrl</kbd><kbd>Z</kbd> / <kbd>Y</kbd></span></div>
+      <div class="key-row"><span>Delete selected</span><span><kbd>Del</kbd></span></div>
+      <div class="key-row"><span>Duplicate</span><span><kbd>Ctrl</kbd><kbd>D</kbd></span></div>
+      <div class="key-row"><span>Rotate 45° (Shift 15°)</span><span><kbd>Q</kbd><kbd>E</kbd></span></div>
+      <div class="key-row"><span>Nudge</span><span><kbd>←</kbd><kbd>↑</kbd><kbd>→</kbd><kbd>↓</kbd></span></div>
+      <div class="key-row"><span>Focus selected</span><span><kbd>F</kbd></span></div>
+      <div class="key-row"><span>Camera views</span><span><kbd>1</kbd>–<kbd>4</kbd></span></div>
+      <div class="key-row"><span>Toggle snap</span><span><kbd>G</kbd></span></div>
+      <div class="key-row"><span>Cycle walls</span><span><kbd>W</kbd></span></div>
+      <div class="key-row"><span>Play day cycle</span><span><kbd>P</kbd></span></div>
+      <div class="key-row"><span>Deselect / close</span><span><kbd>Esc</kbd></span></div>
+      <div class="key-row"><span>Focus object</span><span>Double-click</span></div>
     </div>
   </div>
-
-  <div id="viewport">
-    <div id="hint">Drag empty space to orbit &middot; Scroll to zoom<br>Click + drag an object directly to move it</div>
-  </div>
-
-  <div id="inspector">
-    <h2 class="section">Selected Object</h2>
-    <div id="noSelection">Nothing selected. Add something from Furniture/Create, or click an object in the room.</div>
-    <div id="objectPanel" style="display:none">
-      <div id="selectedName">Sofa</div>
-
-      <h2 class="section">Color</h2>
-      <div class="swatches" id="colorSwatches"></div>
-      <div class="row"><label>Custom</label><input id="objColor" type="color"></div>
-      <div class="row"><label>Finish (matte&#8594;glossy)</label><input id="objShine" type="range" min="0" max="1" step="0.05" value="0.4"></div>
-
-      <h2 class="section">Transform</h2>
-      <div class="row"><label>Rotation</label><input id="objRot" type="range" min="0" max="6.28" step="0.05"></div>
-      <div class="row"><label>Scale</label><input id="objScale" type="range" min="0.4" max="2.2" step="0.05"></div>
-      <div class="row"><label>Pos X (fine)</label><input id="objX" type="range" min="-8" max="8" step="0.05"></div>
-      <div class="row"><label>Pos Z (fine)</label><input id="objZ" type="range" min="-8" max="8" step="0.05"></div>
-
-      <button id="deleteBtn">Delete Object</button>
-    </div>
-  </div>
-
 </div>
 
 <script>
-/* ================= SCENE SETUP ================= */
-const viewport = document.getElementById('viewport');
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x1b1d23);
+setTimeout(() => {
+  const l = document.getElementById('loader');
+  if (l && !l.classList.contains('done')) l.querySelector('.loader-text').textContent = 'Still loading… the 3D engine comes from a CDN, so an internet connection is needed.';
+}, 9000);
+</script>
 
-const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+const V3 = THREE.Vector3;
+
+/* ================= helpers ================= */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const damp = (a, b, k, dt) => lerp(a, b, 1 - Math.exp(-k * dt));
+const wrapAngle = a => Math.atan2(Math.sin(a), Math.cos(a));
+const dampAngle = (a, b, k, dt) => a + wrapAngle(b - a) * (1 - Math.exp(-k * dt));
+const smoothstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const easeOutBack = t => 1 + 2.70158 * Math.pow(t - 1, 3) + 1.70158 * Math.pow(t - 1, 2);
+const easeInBack = t => 2.70158 * t * t * t - 1.70158 * t * t;
+const easeInOut = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const uid = () => Math.random().toString(36).slice(2, 10);
+function rng(seed) { let s = Math.abs(Math.floor(seed)) % 2147483646 + 1; return () => (s = s * 16807 % 2147483647) / 2147483647; }
+const toRgb = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+const toHex = c => '#' + c.map(v => clamp(Math.round(v), 0, 255).toString(16).padStart(2, '0')).join('');
+const mix = (a, b, t) => { const A = toRgb(a), B = toRgb(b); return toHex(A.map((v, i) => lerp(v, B[i], t))); };
+const shade = (h, amt) => mix(h, amt >= 0 ? '#ffffff' : '#000000', Math.abs(amt));
+const rgba = (h, a) => { const [r, g, b] = toRgb(h); return `rgba(${r},${g},${b},${a})`; };
+const fmt = (n, d = 2) => Number(n).toFixed(d);
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+
+/* ================= icons ================= */
+const ICONS = {
+  logo: '<path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/>',
+  menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+  undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+  redo: '<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',
+  cube: '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/>',
+  top: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18M12 3v18"/>',
+  front: '<rect x="4" y="5" width="16" height="14" rx="1.5"/><path d="M4 15h16"/>',
+  eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  spin: '<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/>',
+  walls: '<path d="M3 20V8l9-5 9 5v12"/><path d="M3 20h18"/>',
+  magnet: '<path d="m6 15-4-4 6.75-6.77a7.79 7.79 0 0 1 11 11L13 22l-4-4 6.39-6.36a2.14 2.14 0 0 0-3-3L6 15"/><path d="m5 8 4 4M12 15l4 4"/>',
+  camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>',
+  help: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/>',
+  trash: '<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  rotL: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+  rotR: '<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',
+  focus: '<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/>',
+  play: '<path d="m7 4 13 8-13 8z"/>',
+  pause: '<path d="M7 4h3v16H7zM14 4h3v16h-3z"/>',
+  bulb: '<path d="M9 18h6M10 22h4M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/>',
+  x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+  room: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15h7v6M14 3v7h7"/>',
+  shapes: '<circle cx="7" cy="7" r="4"/><rect x="13" y="13" width="8" height="8" rx="1"/><path d="M17 3l4 7h-8zM3 21l4-7 4 7z"/>',
+  sofa: '<path d="M5 10V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3"/><path d="M3 12a2 2 0 0 1 4 0v2h10v-2a2 2 0 0 1 4 0v5H3z"/><path d="M5 17v2M19 17v2"/>',
+  armchair: '<path d="M7 10V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v4"/><path d="M4 11a2 2 0 0 1 3 1.7V14h10v-1.3A2 2 0 0 1 20 11v6H4z"/><path d="M6 17v3M18 17v3"/>',
+  coffeeTable: '<path d="M3 10h18M5 10v8M19 10v8M5 15h14"/>',
+  diningTable: '<ellipse cx="12" cy="8" rx="9" ry="3"/><path d="M12 11v9M8 20h8"/>',
+  chair: '<path d="M7 3v10h10M7 13v8M17 13v8M7 17h10"/>',
+  bed: '<path d="M3 20V5M3 11h18v9M3 16h18"/><rect x="5" y="8" width="5" height="3" rx="1"/>',
+  nightstand: '<rect x="5" y="5" width="14" height="14" rx="1.5"/><path d="M5 12h14M11 8.5h2M11 15.5h2M7 19v2M17 19v2"/>',
+  wardrobe: '<rect x="5" y="2" width="14" height="19" rx="1.5"/><path d="M12 2v19M10 10v3M14 10v3"/>',
+  bookshelf: '<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M4 9h16M4 15h16M7 5v4M9 6v3M8 11v4M14 11v4M12 17v4M14 18v3"/>',
+  desk: '<path d="M2 9h20M4 9v11M20 9v11"/><rect x="13" y="9" width="7" height="6"/>',
+  tvUnit: '<rect x="3" y="3" width="18" height="11" rx="1.5"/><path d="M2 18h20M4 18v3M20 18v3M12 14v4"/>',
+  floorLamp: '<path d="M8 3h8l2 6H6zM12 9v12M8 21h8"/>',
+  plant: '<path d="M7 15h10l-1.5 7h-7zM12 15V9"/><path d="M12 10C12 6 9 4 5 4c0 4 3 6 7 6zM12 9c0-3 2-5 6-5 0 3-2 5-6 5z"/>',
+  rug: '<rect x="3" y="6" width="18" height="12" rx="1"/><rect x="6" y="9" width="12" height="6" rx=".5"/>',
+};
+const icon = n => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ICONS.shapes}</svg>`;
+$$('[data-icon]').forEach(el => el.insertAdjacentHTML('afterbegin', icon(el.dataset.icon)));
+
+/* ================= renderer / scene ================= */
+const viewport = $('#viewport');
 const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.NeutralToneMapping;
 viewport.appendChild(renderer.domElement);
+const ANISO = renderer.capabilities.getMaxAnisotropy();
 
-function resize() {
-  const w = viewport.clientWidth, h = viewport.clientHeight;
-  renderer.setSize(w, h);
-  camera.aspect = w / h;
-  camera.updateProjectionMatrix();
-}
-window.addEventListener('resize', resize);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(42, 1, 0.05, 200);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
 
-/* ================= CAMERA (orbit) ================= */
-let camTarget = new THREE.Vector3(0, 1, 0);
-let camDist = 12, camTheta = Math.PI / 4, camPhi = 1.0;
-function updateCamera() {
-  camPhi = Math.max(0.2, Math.min(1.5, camPhi));
-  camDist = Math.max(3, Math.min(30, camDist));
-  camera.position.set(
-    camTarget.x + camDist * Math.sin(camPhi) * Math.sin(camTheta),
-    camTarget.y + camDist * Math.cos(camPhi),
-    camTarget.z + camDist * Math.sin(camPhi) * Math.cos(camTheta)
-  );
-  camera.lookAt(camTarget);
-}
-renderer.domElement.addEventListener('wheel', e => { camDist += e.deltaY * 0.01; updateCamera(); });
-
-/* ================= LIGHTING ================= */
-const ambient = new THREE.AmbientLight(0xffffff, 0.55);
-scene.add(ambient);
-const sun = new THREE.DirectionalLight(0xfff2d9, 1.2);
-sun.position.set(6, 10, 4);
+const hemi = new THREE.HemisphereLight(0xdfe9ff, 0x5a4a3c, .5);
+const sun = new THREE.DirectionalLight(0xfff1de, 3);
 sun.castShadow = true;
-sun.shadow.mapSize.set(1024, 1024);
-scene.add(sun);
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.bias = -0.0003;
+sun.shadow.normalBias = 0.03;
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 50;
+scene.add(hemi, sun, sun.target);
 
-/* ================= TEXTURE GENERATOR ================= */
-function makeTexture(drawFn, repeatX = 2, repeatY = 2, size = 256) {
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = size;
-  const ctx = canvas.getContext('2d');
-  drawFn(ctx, size);
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(repeatX, repeatY);
-  return tex;
-}
+/* ================= state ================= */
+const R = { w: 7, d: 6, h: 2.8, wallPattern: 'plaster', wallA: '#ece8e1', wallB: '#d9d2c6', floorPattern: 'wood', floorA: '#d6b48a', floorB: '#b98f62' };
+const RC = { w: R.w, d: R.d, h: R.h };
+const L = { brightness: 1, warmth: .5, lamps: 'auto' };
+const P = Object.assign({ theme: 'dark', snap: true, walls: 'auto', time: 15.5 }, store.get('atelier.prefs') || {});
+let items = [], selected = null, hovered = null, drag = null, down = null, playing = false, lampLevel = 0;
+const savePrefs = () => store.set('atelier.prefs', P);
 
-const wallPatterns = {
-  solid: (c1) => (ctx, s) => { ctx.fillStyle = c1; ctx.fillRect(0, 0, s, s); },
-  stripes: (c1, c2) => (ctx, s) => {
-    ctx.fillStyle = c1; ctx.fillRect(0, 0, s, s);
-    ctx.fillStyle = c2;
-    const bw = s / 8;
-    for (let i = 0; i < 8; i += 2) ctx.fillRect(i * bw, 0, bw, s);
-  },
-  brick: (c1, c2) => (ctx, s) => {
-    ctx.fillStyle = c2; ctx.fillRect(0, 0, s, s);
-    ctx.fillStyle = c1;
-    const rows = 6, bh = s / rows;
-    for (let r = 0; r < rows; r++) {
-      const offset = (r % 2) * (s / 6);
-      for (let x = -s / 3; x < s; x += s / 3) {
-        ctx.fillRect(x + offset + 2, r * bh + 2, s / 3 - 4, bh - 4);
-      }
-    }
-  },
-  dots: (c1, c2) => (ctx, s) => {
-    ctx.fillStyle = c1; ctx.fillRect(0, 0, s, s);
-    ctx.fillStyle = c2;
-    for (let y = s / 8; y < s; y += s / 4) {
-      for (let x = s / 8; x < s; x += s / 4) {
-        ctx.beginPath(); ctx.arc(x, y, s / 30, 0, Math.PI * 2); ctx.fill();
-      }
-    }
-  },
-  floral: (c1, c2) => (ctx, s) => {
-    ctx.fillStyle = c1; ctx.fillRect(0, 0, s, s);
-    ctx.fillStyle = c2;
-    for (let y = s / 6; y < s; y += s / 3) {
-      for (let x = s / 6; x < s; x += s / 3) {
-        for (let p = 0; p < 5; p++) {
-          const ang = (p / 5) * Math.PI * 2;
-          ctx.beginPath();
-          ctx.arc(x + Math.cos(ang) * s / 40, y + Math.sin(ang) * s / 40, s / 45, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-    }
-  }
-};
-
-const floorPatterns = {
-  solid: (c1) => (ctx, s) => { ctx.fillStyle = c1; ctx.fillRect(0, 0, s, s); },
-  wood: (c1, c2) => (ctx, s) => {
-    ctx.fillStyle = c1; ctx.fillRect(0, 0, s, s);
-    ctx.strokeStyle = c2; ctx.lineWidth = 2;
-    const planks = 6;
-    for (let i = 1; i < planks; i++) {
-      ctx.beginPath(); ctx.moveTo(0, i * s / planks); ctx.lineTo(s, i * s / planks); ctx.stroke();
-    }
-    ctx.strokeStyle = c2 + '55';
-    for (let i = 0; i < 40; i++) {
-      const y = Math.random() * s;
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(s, y + (Math.random() - 0.5) * 8); ctx.stroke();
-    }
-  },
-  tile: (c1, c2) => (ctx, s) => {
-    const n = 4, cell = s / n;
-    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
-      ctx.fillStyle = (x + y) % 2 === 0 ? c1 : c2;
-      ctx.fillRect(x * cell, y * cell, cell, cell);
-    }
-  },
-  marble: (c1, c2) => (ctx, s) => {
-    ctx.fillStyle = c1; ctx.fillRect(0, 0, s, s);
-    ctx.strokeStyle = c2 + 'aa'; ctx.lineWidth = 1.5;
-    for (let i = 0; i < 12; i++) {
-      ctx.beginPath();
-      let x = Math.random() * s, y = 0;
-      ctx.moveTo(x, y);
-      while (y < s) { x += (Math.random() - 0.5) * 30; y += 20; ctx.lineTo(x, y); }
-      ctx.stroke();
-    }
-  }
-};
-
-/* ================= ROOM ================= */
-let room = { width: 8, depth: 8, height: 3 };
-let wallGroup = new THREE.Group();
-scene.add(wallGroup);
-
-function buildRoom() {
-  wallGroup.clear();
-  const { width: w, depth: d, height: h } = room;
-
-  const wc1 = document.getElementById('wallColor').value;
-  const wc2 = document.getElementById('wallColor2').value;
-  const wPattern = document.getElementById('wallPattern').value;
-  const fc1 = document.getElementById('floorColor').value;
-  const fc2 = document.getElementById('floorColor2').value;
-  const fPattern = document.getElementById('floorPattern').value;
-
-  const wallTex = makeTexture(wallPatterns[wPattern](wc1, wc2), Math.max(1, w / 3), Math.max(1, h / 2));
-  const floorTex = makeTexture(floorPatterns[fPattern](fc1, fc2), Math.max(1, w / 2), Math.max(1, d / 2));
-
-  const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, side: THREE.DoubleSide, roughness: 0.9 });
-  const floorMat = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.7 });
-
-  const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), floorMat);
-  floorMesh.rotation.x = -Math.PI / 2;
-  floorMesh.receiveShadow = true;
-  wallGroup.add(floorMesh);
-
-  const backWall = new THREE.Mesh(new THREE.PlaneGeometry(w, h), wallMat);
-  backWall.position.set(0, h / 2, -d / 2);
-  backWall.receiveShadow = true;
-  wallGroup.add(backWall);
-
-  const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(d, h), wallMat);
-  leftWall.rotation.y = Math.PI / 2;
-  leftWall.position.set(-w / 2, h / 2, 0);
-  leftWall.receiveShadow = true;
-  wallGroup.add(leftWall);
-
-  const rightMat = wallMat.clone();
-  rightMat.transparent = true;
-  rightMat.opacity = 0.18;
-  const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(d, h), rightMat);
-  rightWall.rotation.y = -Math.PI / 2;
-  rightWall.position.set(w / 2, h / 2, 0);
-  wallGroup.add(rightWall);
-
-  camTarget.set(0, h / 2.5, 0);
-  updateCamera();
-}
-
-/* ================= FURNITURE BUILDERS ================= */
-function mat(color) { return new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.05 }); }
-function addShadow(obj) { obj.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } }); }
-
-const builders = {
-  Sofa: (color) => {
-    const g = new THREE.Group();
-    const base = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.4, 0.8), mat(color));
-    base.position.y = 0.2; g.add(base);
-    const back = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.5, 0.15), mat(color));
-    back.position.set(0, 0.55, -0.32); g.add(back);
-    [-0.85, 0.85].forEach(x => {
-      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.5, 0.8), mat(color));
-      arm.position.set(x, 0.45, 0); g.add(arm);
+/* ================= procedural textures ================= */
+function wrap9(s, fn) { for (const ox of [-s, 0, s]) for (const oy of [-s, 0, s]) fn(ox, oy); }
+function blotches(ctx, s, color, n, rmin, rmax, alpha, r) {
+  for (let i = 0; i < n; i++) {
+    const x = r() * s, y = r() * s, rad = lerp(rmin, rmax, r());
+    wrap9(s, (ox, oy) => {
+      const cx = x + ox, cy = y + oy;
+      if (cx + rad < 0 || cx - rad > s || cy + rad < 0 || cy - rad > s) return;
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+      g.addColorStop(0, rgba(color, alpha)); g.addColorStop(1, rgba(color, 0));
+      ctx.fillStyle = g; ctx.fillRect(cx - rad, cy - rad, rad * 2, rad * 2);
     });
-    return g;
-  },
-  Table: (color) => {
-    const g = new THREE.Group();
-    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.06, 24), mat(color));
-    top.position.y = 0.45; g.add(top);
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.45, 12), mat('#4a4a4a'));
-    leg.position.y = 0.225; g.add(leg);
-    return g;
-  },
-  Chair: (color) => {
-    const g = new THREE.Group();
-    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.06, 0.45), mat(color));
-    seat.position.y = 0.45; g.add(seat);
-    const back = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.5, 0.06), mat(color));
-    back.position.set(0, 0.7, -0.2); g.add(back);
-    [[-0.18,-0.18],[0.18,-0.18],[-0.18,0.18],[0.18,0.18]].forEach(([x,z]) => {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.45, 8), mat('#3a3a3a'));
-      leg.position.set(x, 0.225, z); g.add(leg);
-    });
-    return g;
-  },
-  Bed: (color) => {
-    const g = new THREE.Group();
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.3, 2.0), mat('#5c4632'));
-    frame.position.y = 0.15; g.add(frame);
-    const mattress = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.2, 1.9), mat(color));
-    mattress.position.y = 0.4; g.add(mattress);
-    const pillow = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.12, 0.4), mat('#ffffff'));
-    pillow.position.set(0, 0.56, -0.75); g.add(pillow);
-    return g;
-  },
-  Bookshelf: (color) => {
-    const g = new THREE.Group();
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.8, 0.3), mat(color));
-    frame.position.y = 0.9; g.add(frame);
-    for (let i = 1; i < 4; i++) {
-      const shelf = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.03, 0.28), mat('#2f2f2f'));
-      shelf.position.y = i * 0.45; g.add(shelf);
-    }
-    return g;
-  },
-  Lamp: (color) => {
-    const g = new THREE.Group();
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.18, 0.05, 16), mat('#333'));
-    base.position.y = 0.025; g.add(base);
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.1, 8), mat('#333'));
-    pole.position.y = 0.6; g.add(pole);
-    const shade = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.3, 16, 1, true), mat(color));
-    shade.position.y = 1.25; g.add(shade);
-    return g;
-  },
-  Plant: (color) => {
-    const g = new THREE.Group();
-    const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.16, 0.3, 16), mat('#7a4a30'));
-    pot.position.y = 0.15; g.add(pot);
-    for (let i = 0; i < 5; i++) {
-      const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), mat(color));
-      leaf.position.set((Math.random()-0.5)*0.3, 0.5 + Math.random()*0.3, (Math.random()-0.5)*0.3);
-      g.add(leaf);
-    }
-    return g;
-  },
-  TV: (color) => {
-    const g = new THREE.Group();
-    const screen = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.65, 0.05), mat(color));
-    screen.position.y = 0.9; g.add(screen);
-    const stand = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.15), mat('#2b2b2b'));
-    stand.position.y = 0.25; g.add(stand);
-    return g;
   }
+}
+function grain(ctx, s, amt, r) {
+  const img = ctx.getImageData(0, 0, s, s), d = img.data;
+  for (let i = 0; i < d.length; i += 4) { const n = (r() - .5) * amt; d[i] += n; d[i + 1] += n; d[i + 2] += n; }
+  ctx.putImageData(img, 0, 0);
+}
+function plank(ctx, x, y, w, h, col, dark, r, u) {
+  ctx.fillStyle = col; ctx.fillRect(x, y, w, h);
+  ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+  for (let k = 0; k < 7; k++) {
+    const gy = y + r() * h, amp = (1 + r() * 2.5) * u, fr = (.004 + r() * .01) / u, ph = r() * 6;
+    ctx.strokeStyle = rgba(dark, .08 + r() * .14); ctx.lineWidth = (.6 + r() * 1.4) * u;
+    ctx.beginPath();
+    for (let xx = x; xx <= x + w + 6 * u; xx += 6 * u) { const yy = gy + Math.sin(xx * fr + ph) * amp; xx === x ? ctx.moveTo(xx, yy) : ctx.lineTo(xx, yy); }
+    ctx.stroke();
+  }
+  ctx.restore();
+  ctx.fillStyle = rgba(dark, .55); ctx.fillRect(x, y, w, 1.5 * u); ctx.fillRect(x, y, 1.5 * u, h);
+}
+const WALL_PATTERNS = {
+  plaster: { label: 'Plaster', tile: 1.6, draw(ctx, s, a, b, r) {
+    ctx.fillStyle = a; ctx.fillRect(0, 0, s, s);
+    blotches(ctx, s, shade(a, -.07), 30, s * .06, s * .2, .35, r); blotches(ctx, s, shade(a, .06), 20, s * .05, s * .16, .35, r); grain(ctx, s, 8, r);
+  } },
+  stripes: { label: 'Stripes', tile: .9, draw(ctx, s, a, b, r) {
+    const u = s / 512, sw = s / 8; ctx.fillStyle = a; ctx.fillRect(0, 0, s, s);
+    for (let i = 0; i < 8; i++) { if (i % 2) { ctx.fillStyle = b; ctx.fillRect(i * sw, 0, sw, s); } ctx.fillStyle = shade(b, -.12); ctx.fillRect(i * sw, 0, 1.5 * u, s); }
+    grain(ctx, s, 6, r);
+  } },
+  brick: { label: 'Brick', tile: 1.2, draw(ctx, s, a, b, r) {
+    const u = s / 512, rows = 8, cols = 4, bh = s / rows, bw = s / cols, m = 5 * u;
+    ctx.fillStyle = b; ctx.fillRect(0, 0, s, s);
+    for (let row = 0; row < rows; row++) {
+      const cs = Array.from({ length: cols }, () => shade(mix(a, shade(a, -.28), r() * .7), (r() - .5) * .1));
+      const off = (row % 2) * bw / 2;
+      for (let c = -1; c <= cols; c++) {
+        const x = c * bw + off; ctx.fillStyle = cs[(c + cols) % cols];
+        ctx.fillRect(x + m / 2, row * bh + m / 2, bw - m, bh - m);
+        ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.fillRect(x + m / 2, row * bh + m / 2, bw - m, 2 * u);
+      }
+    }
+    grain(ctx, s, 16, r);
+  } },
+  panels: { label: 'Panels', tile: 1.2, draw(ctx, s, a, b, r) {
+    const u = s / 512, n = 6, pw = s / n;
+    for (let i = 0; i < n; i++) {
+      ctx.fillStyle = shade(a, (r() - .5) * .04); ctx.fillRect(i * pw, 0, pw, s);
+      ctx.fillStyle = shade(a, -.22); ctx.fillRect(i * pw, 0, 3 * u, s);
+      ctx.fillStyle = shade(a, .12); ctx.fillRect(i * pw + 3 * u, 0, 2 * u, s);
+    }
+    grain(ctx, s, 6, r);
+  } },
 };
-const defaultColors = {
-  Sofa: '#8a3b3b', Table: '#c9a468', Chair: '#5b7a99', Bed: '#c7d0e0',
-  Bookshelf: '#7a5230', Lamp: '#f0d98c', Plant: '#3f7a3f', TV: '#111111'
+const FLOOR_PATTERNS = {
+  wood: { label: 'Wood', tile: 1.2, draw(ctx, s, a, b, r) {
+    const u = s / 512, rows = 6, ph = s / rows, dark = shade(b, -.35);
+    for (let i = 0; i < rows; i++) {
+      const x0 = -r() * s; let x = x0;
+      while (x < x0 + s - 1) {
+        let len = s * (.3 + r() * .45); if (x + len > x0 + s - s * .12) len = x0 + s - x;
+        const col = shade(mix(a, b, r() * .55), (r() - .5) * .08), seed = r() * 1e9;
+        for (const ox of [-s, 0, s]) plank(ctx, x + ox, i * ph, len, ph, col, dark, rng(seed), u);
+        x += len;
+      }
+    }
+    grain(ctx, s, 8, r);
+  } },
+  checker: { label: 'Checker', tile: 1.6, draw(ctx, s, a, b, r) {
+    const u = s / 512, n = 4, c = s / n;
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { ctx.fillStyle = shade((x + y) % 2 ? b : a, (r() - .5) * .05); ctx.fillRect(x * c, y * c, c, c); }
+    ctx.strokeStyle = 'rgba(0,0,0,.2)'; ctx.lineWidth = 2 * u;
+    for (let i = 0; i <= n; i++) { ctx.beginPath(); ctx.moveTo(i * c, 0); ctx.lineTo(i * c, s); ctx.moveTo(0, i * c); ctx.lineTo(s, i * c); ctx.stroke(); }
+    blotches(ctx, s, '#ffffff', 10, s * .05, s * .15, .06, r); grain(ctx, s, 5, r);
+  } },
+  marble: { label: 'Marble', tile: 2.4, draw(ctx, s, a, b, r) {
+    const u = s / 512; ctx.fillStyle = a; ctx.fillRect(0, 0, s, s);
+    blotches(ctx, s, shade(a, -.05), 20, s * .1, s * .3, .4, r);
+    ctx.filter = `blur(${u}px)`;
+    for (let i = 0; i < 9; i++) {
+      const pts = []; let x = r() * s, y = -20 * u;
+      while (y < s + 20 * u) { pts.push([x, y]); x += (r() - .5) * s * .12; y += s / 12; }
+      ctx.strokeStyle = rgba(b, .25 + r() * .35); ctx.lineWidth = (.6 + r() * 2.2) * u;
+      for (const ox of [-s, 0, s]) { ctx.beginPath(); pts.forEach(([px, py], k) => k ? ctx.lineTo(px + ox, py) : ctx.moveTo(px + ox, py)); ctx.stroke(); }
+    }
+    ctx.filter = 'none';
+    ctx.strokeStyle = 'rgba(0,0,0,.12)'; ctx.lineWidth = 1.5 * u;
+    for (let i = 0; i <= 4; i++) { ctx.beginPath(); ctx.moveTo(i * s / 4, 0); ctx.lineTo(i * s / 4, s); ctx.moveTo(0, i * s / 4); ctx.lineTo(s, i * s / 4); ctx.stroke(); }
+  } },
+  concrete: { label: 'Concrete', tile: 3, draw(ctx, s, a, b, r) {
+    const u = s / 512; ctx.fillStyle = a; ctx.fillRect(0, 0, s, s);
+    blotches(ctx, s, shade(a, -.12), 26, s * .05, s * .22, .28, r); blotches(ctx, s, shade(a, .1), 18, s * .05, s * .18, .25, r);
+    grain(ctx, s, 24, r);
+    ctx.fillStyle = rgba(shade(b, -.1), .55);
+    for (const p of [0, s / 2]) { ctx.fillRect(p - u, 0, 2 * u, s); ctx.fillRect(0, p - u, s, 2 * u); }
+    ctx.fillRect(s - u, 0, u, s); ctx.fillRect(0, s - u, s, u);
+  } },
 };
+function patternCanvas(p, a, b, size = 512) {
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  p.draw(c.getContext('2d', { willReadFrequently: true }), size, a, b, rng(7)); return c;
+}
+function canvasTex(c) {
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = ANISO; return t;
+}
+const rugTex = (() => {
+  const W = 512, H = 344, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.fillStyle = '#f4f4f4'; ctx.fillRect(0, 0, W, H);
+  [[18, '#9e9e9e'], [30, '#ececec'], [40, '#c4c4c4'], [46, '#f6f6f6']].forEach(([i, col]) => { ctx.fillStyle = col; ctx.fillRect(i, i, W - i * 2, H - i * 2); });
+  const dia = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x, y - h); ctx.lineTo(x + w, y); ctx.lineTo(x, y + h); ctx.lineTo(x - w, y); ctx.fill(); };
+  for (let x = 70; x < W - 50; x += 36) for (let y = 70; y < H - 50; y += 36) dia(x, y, 6, 6, '#dedede');
+  dia(W / 2, H / 2, 120, 90, '#b5b5b5'); dia(W / 2, H / 2, 86, 64, '#f2f2f2'); dia(W / 2, H / 2, 30, 22, '#9a9a9a');
+  const img = ctx.getImageData(0, 0, W, H), r = rng(3);
+  for (let i = 0; i < img.data.length; i += 4) { const n = (r() - .5) * 22; img.data[i] += n; img.data[i + 1] += n; img.data[i + 2] += n; }
+  ctx.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = ANISO; t.userData.shared = true; return t;
+})();
 
-function buildCustom(shape, sx, sy, sz, color) {
-  const g = new THREE.Group();
-  let geo;
-  if (shape === 'box') geo = new THREE.BoxGeometry(sx, sy, sz);
-  else if (shape === 'sphere') geo = new THREE.SphereGeometry(sx / 2, 20, 20);
-  else if (shape === 'cylinder') geo = new THREE.CylinderGeometry(sx / 2, sx / 2, sy, 20);
-  else geo = new THREE.ConeGeometry(sx / 2, sy, 20);
-  const meshObj = new THREE.Mesh(geo, mat(color));
-  meshObj.position.y = sy / 2;
-  g.add(meshObj);
-  return g;
+/* ================= room ================= */
+const T = 0.12;
+const WALLS = ['back', 'right', 'front', 'left'];
+const WALL_ROT = { back: 0, front: Math.PI, left: Math.PI / 2, right: -Math.PI / 2 };
+const floorMat = new THREE.MeshStandardMaterial({ roughness: .55 });
+const slabMat = new THREE.MeshStandardMaterial({ color: '#2a2622', roughness: .9 });
+const capMat = new THREE.MeshStandardMaterial({ roughness: .85 });
+const outerMat = new THREE.MeshStandardMaterial({ roughness: .9 });
+const trimMat = new THREE.MeshStandardMaterial({ roughness: .5 });
+const floor = new THREE.Mesh(new THREE.BoxGeometry(1, .1, 1).translate(0, -.05, 0), [slabMat, slabMat, floorMat, slabMat, slabMat, slabMat]);
+floor.receiveShadow = true; scene.add(floor);
+const wallGeo = new THREE.BoxGeometry(1, 1, T).translate(0, .5, -T / 2);
+const baseGeo = new THREE.BoxGeometry(1, .08, .014).translate(0, .04, .007);
+const walls = {};
+for (const k of WALLS) {
+  const g = new THREE.Group(), inner = new THREE.MeshStandardMaterial({ roughness: .92 });
+  const mesh = new THREE.Mesh(wallGeo, [capMat, capMat, capMat, capMat, inner, outerMat]); mesh.receiveShadow = true;
+  const base = new THREE.Mesh(baseGeo, trimMat); base.receiveShadow = true;
+  g.add(mesh, base); scene.add(g); walls[k] = { g, mesh, inner, base, f: 1 };
+}
+const contact = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 128; const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(64, 64, 20, 64, 64, 64); g.addColorStop(0, 'rgba(0,0,0,.6)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 128, 128);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
+  m.position.y = -.11; scene.add(m); return m;
+})();
+let grid;
+function buildGrid() {
+  if (grid) { scene.remove(grid); grid.geometry.dispose(); }
+  const pts = [], st = .25;
+  for (let x = Math.ceil(-R.w / 2 / st) * st; x <= R.w / 2 + 1e-6; x += st) pts.push(x, 0, -R.d / 2, x, 0, R.d / 2);
+  for (let z = Math.ceil(-R.d / 2 / st) * st; z <= R.d / 2 + 1e-6; z += st) pts.push(-R.w / 2, 0, z, R.w / 2, 0, z);
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  const op = grid ? grid.material.opacity : 0;
+  grid = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0xe2bf7e, transparent: true, opacity: op, depthWrite: false }));
+  grid.position.y = .004; scene.add(grid);
+}
+function refreshRoomTextures() {
+  const wc = patternCanvas(WALL_PATTERNS[R.wallPattern], R.wallA, R.wallB);
+  for (const k of WALLS) { walls[k].inner.map?.dispose(); walls[k].inner.map = canvasTex(wc); walls[k].inner.needsUpdate = true; }
+  floorMat.map?.dispose(); floorMat.map = canvasTex(patternCanvas(FLOOR_PATTERNS[R.floorPattern], R.floorA, R.floorB)); floorMat.needsUpdate = true;
+  outerMat.color.set(shade(R.wallA, -.12)); capMat.color.set(shade(R.wallA, -.2)); trimMat.color.set(mix(R.wallA, '#ffffff', .6));
+  drawThumbs();
+}
+function layoutRoom() {
+  const { w, d, h } = RC, fp = FLOOR_PATTERNS[R.floorPattern], wp = WALL_PATTERNS[R.wallPattern];
+  floor.scale.set(w + 2 * T, 1, d + 2 * T);
+  floorMat.map?.repeat.set((w + 2 * T) / fp.tile, (d + 2 * T) / fp.tile);
+  contact.scale.set(w + 3.5, 1, d + 3.5);
+  for (const k of WALLS) {
+    const W = walls[k], xz = k === 'back' || k === 'front';
+    const len = xz ? w + 2 * T : d, hh = Math.max(.001, h * W.f);
+    W.g.position.set(k === 'left' ? -w / 2 : k === 'right' ? w / 2 : 0, 0, k === 'back' ? -d / 2 : k === 'front' ? d / 2 : 0);
+    W.g.rotation.y = WALL_ROT[k];
+    W.mesh.scale.set(len, hh, 1); W.base.scale.x = xz ? w : d;
+    W.inner.map?.repeat.set(len / wp.tile, hh / wp.tile);
+  }
+}
+function updateShadowCam() {
+  const e = Math.max(R.w, R.d) * .8 + 1.5, c = sun.shadow.camera;
+  c.left = c.bottom = -e; c.right = c.top = e; c.updateProjectionMatrix();
 }
 
-/* ================= UI: CATALOG ================= */
-const catalogEl = document.getElementById('catalog');
-Object.keys(builders).forEach(name => {
-  const item = document.createElement('div');
-  item.className = 'catalog-item';
-  item.innerHTML = `<span>${name}</span><span class="plus">+</span>`;
-  item.onclick = () => spawnEntry(name, builders[name](defaultColors[name]), defaultColors[name]);
-  catalogEl.appendChild(item);
-});
+/* ================= furniture ================= */
+const FINISHES = { fabric: [.95, 0, 'Fabric'], matte: [.75, 0, 'Matte'], wood: [.5, 0, 'Wood'], satin: [.35, .05, 'Satin'], gloss: [.12, 0, 'Gloss'], metal: [.28, .9, 'Metal'] };
+const primaryMat = (color, f) => new THREE.MeshStandardMaterial({ color, roughness: FINISHES[f][0], metalness: FINISHES[f][1] });
+const std = (color, r = .6, m = 0, x = {}) => new THREE.MeshStandardMaterial({ color, roughness: r, metalness: m, ...x });
+const add = (p, geo, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); p.add(m); return m; };
+const rb = (w, h, d, r = .03) => new RoundedBoxGeometry(w, h, d, 3, Math.max(.001, Math.min(r, w / 2 - .002, h / 2 - .002, d / 2 - .002)));
+const cyl = (a, b, h, s = 24, open = false) => new THREE.CylinderGeometry(a, b, h, s, 1, open);
+const legs = (g, mat, xs, zs, h, r = .022) => { for (const x of xs) for (const z of zs) add(g, cyl(r, r * .75, h, 12), mat, x, h / 2, z); };
+const WOOD = '#5a4130', DARK = '#2a2a2d', BRASS = '#c2a063', LINEN = '#f2efe9';
 
-/* ================= UI: TABS ================= */
-document.querySelectorAll('.tab').forEach(tab => {
-  tab.onclick = () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+const CATALOG = {
+  sofa: { name: 'Sofa', cat: 'Living', color: '#6f7f72', finish: 'fabric', build(g, pm) {
+    legs(g, std(WOOD, .5), [-.95, .95], [-.35, .35], .1);
+    add(g, rb(2.1, .24, .9, .04), pm, 0, .22, 0);
+    for (const x of [-.65, 0, .65]) add(g, rb(.64, .14, .66, .06), pm, x, .41, .08);
+    add(g, rb(2.1, .5, .2, .06), pm, 0, .59, -.35);
+    for (const x of [-.65, 0, .65]) add(g, rb(.62, .4, .16, .07), pm, x, .64, -.2).rotation.x = -.12;
+    for (const x of [-.96, .96]) add(g, rb(.18, .56, .9, .06), pm, x, .38, 0);
+  } },
+  armchair: { name: 'Armchair', cat: 'Living', color: '#c9a77c', finish: 'fabric', build(g, pm) {
+    legs(g, std(WOOD, .5), [-.38, .38], [-.32, .32], .1);
+    add(g, rb(.95, .24, .85, .04), pm, 0, .22, 0);
+    add(g, rb(.6, .14, .62, .06), pm, 0, .41, .08);
+    add(g, rb(.95, .52, .2, .06), pm, 0, .6, -.33);
+    for (const x of [-.39, .39]) add(g, rb(.17, .52, .85, .06), pm, x, .36, 0);
+  } },
+  coffeeTable: { name: 'Coffee Table', cat: 'Living', color: '#b08a5e', finish: 'wood', build(g, pm) {
+    add(g, rb(1.1, .05, .6, .015), pm, 0, .405, 0);
+    add(g, rb(1.0, .025, .5, .01), pm, 0, .14, 0);
+    const m = std(DARK, .4, .6); for (const x of [-.5, .5]) for (const z of [-.25, .25]) add(g, new THREE.BoxGeometry(.03, .38, .03), m, x, .19, z);
+  } },
+  tvUnit: { name: 'TV Unit', cat: 'Living', color: '#8b6a4f', finish: 'wood', build(g, pm) {
+    legs(g, std(DARK, .4, .6), [-.82, .82], [-.15, .15], .08, .015);
+    add(g, rb(1.8, .42, .42, .02), pm, 0, .29, 0);
+    const seam = std(shade('#8b6a4f', -.5)); for (const x of [-.3, .3]) add(g, new THREE.BoxGeometry(.006, .36, .004), seam, x, .29, .211);
+    const dark = std(DARK, .4, .5); add(g, new THREE.BoxGeometry(.4, .02, .2), dark, 0, .51, 0); add(g, new THREE.BoxGeometry(.05, .14, .03), dark, 0, .58, -.02);
+    add(g, rb(1.4, .8, .04, .01), std('#0b0b0d', .2, .3), 0, 1.04, 0);
+    add(g, new THREE.PlaneGeometry(1.36, .76), std('#000', .08, 0, { emissive: '#1b2a3c', emissiveIntensity: .6 }), 0, 1.04, .021);
+  } },
+  diningTable: { name: 'Dining Table', cat: 'Dining', color: '#c9a77c', finish: 'wood', build(g, pm) {
+    add(g, cyl(.6, .6, .04, 48), pm, 0, .74, 0);
+    const m = std(DARK, .4, .6); add(g, cyl(.05, .07, .68), m, 0, .38, 0); add(g, cyl(.28, .3, .04, 32), m, 0, .02, 0);
+  } },
+  chair: { name: 'Chair', cat: 'Dining', color: '#3d5a73', finish: 'matte', build(g, pm) {
+    legs(g, std(WOOD, .5), [-.18, .18], [-.18, .18], .44, .018);
+    add(g, rb(.44, .05, .44, .02), pm, 0, .46, 0);
+    add(g, rb(.44, .32, .04, .02), pm, 0, .72, -.2).rotation.x = -.08;
+  } },
+  bed: { name: 'Bed', cat: 'Bedroom', color: '#9aa6a0', finish: 'fabric', build(g, pm) {
+    legs(g, std(WOOD, .5), [-.8, .8], [-1, 1], .06);
+    add(g, rb(1.7, .25, 2.1, .03), pm, 0, .185, 0);
+    add(g, rb(1.76, 1.0, .12, .05), pm, 0, .56, -1.0);
+    const lin = std(LINEN, .95); add(g, rb(1.6, .22, 1.98, .06), lin, 0, .42, .02);
+    add(g, rb(1.64, .07, 1.4, .03), std('#e8e3da', .95), 0, .55, .32);
+    add(g, rb(1.66, .075, .45, .03), std('#8a7a66', .95), 0, .56, .72);
+    for (const x of [-.4, .4]) add(g, rb(.6, .14, .36, .06), lin, x, .6, -.76).rotation.x = -.25;
+  } },
+  nightstand: { name: 'Nightstand', cat: 'Bedroom', color: '#d8cfc0', finish: 'satin', build(g, pm) {
+    legs(g, std(BRASS, .3, .9), [-.2, .2], [-.15, .15], .05, .012);
+    add(g, rb(.48, .5, .4, .02), pm, 0, .3, 0);
+    add(g, new THREE.BoxGeometry(.44, .006, .004), std(shade('#d8cfc0', -.4)), 0, .32, .201);
+    for (const y of [.43, .21]) add(g, new THREE.SphereGeometry(.015, 12, 8), std(BRASS, .3, .9), 0, y, .21);
+  } },
+  wardrobe: { name: 'Wardrobe', cat: 'Bedroom', color: '#efece6', finish: 'satin', build(g, pm) {
+    add(g, rb(1.2, 2.1, .6, .02), pm, 0, 1.07, 0);
+    add(g, new THREE.BoxGeometry(.006, 1.98, .004), std('#888'), 0, 1.08, .301);
+    for (const x of [-.06, .06]) add(g, cyl(.008, .008, .3, 10), std(BRASS, .3, .9), x, 1.1, .32);
+  } },
+  bookshelf: { name: 'Bookshelf', cat: 'Office', color: '#cdbfa8', finish: 'wood', build(g, pm, { rnd }) {
+    for (const x of [-.435, .435]) add(g, rb(.03, 1.9, .32, .01), pm, x, .95, 0);
+    add(g, new THREE.BoxGeometry(.9, 1.9, .01), pm, 0, .95, -.155);
+    for (let i = 0; i < 5; i++) add(g, rb(.84, .025, .3, .008), pm, 0, .02 + i * .46, 0);
+    const pal = ['#8a3b3b', '#3d5a73', '#c9a464', '#4f6b52', '#2b2b2e', '#d9cfc0', '#b5643c'];
+    for (let s = 0; s < 4; s++) {
+      let x = -.4;
+      while (x < .38) {
+        const w = .025 + rnd() * .03, h = .2 + rnd() * .14;
+        if (rnd() < .12) { x += .06; continue; }
+        add(g, new THREE.BoxGeometry(w, h, .2 + rnd() * .04), std(pal[Math.floor(rnd() * pal.length)], .8), x + w / 2, .0325 + s * .46 + h / 2, .02);
+        x += w + .003;
+      }
+    }
+  } },
+  desk: { name: 'Desk', cat: 'Office', color: '#d9c3a0', finish: 'wood', build(g, pm) {
+    add(g, rb(1.3, .035, .65, .01), pm, 0, .74, 0);
+    const m = std(DARK, .4, .6);
+    for (const x of [-.6, .6]) { for (const z of [-.28, .28]) add(g, new THREE.BoxGeometry(.03, .72, .03), m, x, .36, z); add(g, new THREE.BoxGeometry(.03, .03, .56), m, x, .05, 0); }
+    const lap = std('#9a9da3', .3, .8); add(g, new THREE.BoxGeometry(.32, .012, .22), lap, 0, .764, .05);
+    const sc = add(g, new THREE.BoxGeometry(.32, .21, .008), lap, 0, .865, -.07); sc.rotation.x = -.25;
+  } },
+  floorLamp: { name: 'Floor Lamp', cat: 'Lighting', color: '#efe6d6', finish: 'fabric', build(g, pm) {
+    const m = std(DARK, .35, .7);
+    add(g, cyl(.16, .17, .03, 32), m, 0, .015, 0); add(g, cyl(.012, .012, 1.45, 10), m, 0, .74, 0);
+    pm.side = THREE.DoubleSide; add(g, cyl(.2, .25, .32, 32, true), pm, 0, 1.5, 0);
+    const bulb = std('#fff', .3, 0, { emissive: '#ffe2b0', emissiveIntensity: 0 });
+    add(g, new THREE.SphereGeometry(.05, 16, 12), bulb, 0, 1.45, 0).userData.noShadow = true;
+    const light = new THREE.PointLight(0xffd6a0, 0, 8, 2); light.position.set(0, 1.42, 0); g.add(light);
+    return { light, bulb, glow: pm };
+  } },
+  plant: { name: 'Plant', cat: 'Decor', color: '#d9d2c5', finish: 'matte', build(g, pm, { rnd }) {
+    add(g, cyl(.2, .15, .38, 32), pm, 0, .19, 0); add(g, cyl(.185, .185, .02, 24), std('#3b2a20', 1), 0, .37, 0);
+    const greens = ['#3f6b45', '#4d7d4f', '#5e8f57'].map(c => std(c, .6, 0, { side: THREE.DoubleSide }));
+    const stem = std('#4a6b3a', .8), leafGeo = new THREE.SphereGeometry(1, 14, 8);
+    for (let i = 0; i < 13; i++) {
+      const piv = new THREE.Group(); piv.position.y = .37;
+      piv.rotation.set(.15 + rnd() * .4, i / 13 * Math.PI * 2 + rnd() * .4, 0, 'YXZ'); g.add(piv);
+      const len = .45 + rnd() * .65; add(piv, cyl(.006, .008, len, 6), stem, 0, len / 2, 0);
+      const leaf = add(piv, leafGeo, greens[i % 3], 0, len, .16); leaf.scale.set(.085, .012, .2); leaf.rotation.x = .5;
+    }
+  } },
+  rug: { name: 'Rug', cat: 'Decor', color: '#b9a58a', finish: 'fabric', mount: 'flat', build(g, pm) {
+    pm.map = rugTex; add(g, new THREE.BoxGeometry(2.4, .012, 1.6), pm, 0, .006, 0);
+  } },
+  custom: { name: 'Custom', cat: 'Custom', hidden: true, color: '#8fb2cd', finish: 'satin', build(g, pm, { custom: c }) {
+    const { shape, w, h, d } = c; let m;
+    if (shape === 'box') m = add(g, new THREE.BoxGeometry(w, h, d), pm);
+    else if (shape === 'rounded') m = add(g, rb(w, h, d, Math.min(w, h, d) * .2), pm);
+    else { m = add(g, shape === 'sphere' ? new THREE.SphereGeometry(.5, 48, 32) : shape === 'cylinder' ? cyl(.5, .5, 1, 48) : new THREE.ConeGeometry(.5, 1, 48), pm); m.scale.set(w, h, d); }
+    m.position.y = h / 2;
+  } },
+};
+for (const [k, d] of Object.entries(CATALOG)) d.icon = ICONS[k] ? k : 'shapes';
+const CATS = ['All', ...new Set(Object.values(CATALOG).filter(d => !d.hidden).map(d => d.cat))];
+
+/* ================= entries ================= */
+function createEntry(d, { animate = true, delay = 0 } = {}) {
+  const def = CATALOG[d.type]; if (!def) return null;
+  const e = {
+    id: d.id || uid(), type: d.type, def, name: d.name || def.name, color: d.color || def.color, finish: d.finish || def.finish,
+    seed: d.seed ?? Math.floor(Math.random() * 1e9), custom: d.custom ? { ...d.custom } : null, mount: def.mount || 'floor',
+    t: { x: d.x ?? 0, z: d.z ?? 0, rot: d.rot ?? 0, scale: d.scale ?? 1 },
+    curScale: d.scale ?? 1, tilt: { x: 0, z: 0 }, spawn: animate ? -delay : 1, dying: null, dragging: false,
   };
-});
-
-/* ================= UI: CREATE OBJECT ================= */
-['customX','customY','customZ'].forEach(id => {
-  document.getElementById(id).addEventListener('input', e => {
-    document.getElementById(id + 'Val').textContent = e.target.value;
+  e.root = new THREE.Group(); e.inner = new THREE.Group(); e.root.add(e.inner);
+  e.pm = primaryMat(e.color, e.finish);
+  e.fx = def.build(e.inner, e.pm, { rnd: rng(e.seed), custom: e.custom }) || {};
+  e.inner.traverse(o => { if (o.isMesh) { o.castShadow = e.mount !== 'flat' && !o.userData.noShadow; o.receiveShadow = true; } });
+  e.size = new THREE.Box3().setFromObject(e.inner).getSize(new V3());
+  e.root.userData.entry = e;
+  clampFloor(e);
+  e.root.position.set(e.t.x, 0, e.t.z); e.inner.rotation.y = e.t.rot;
+  e.inner.scale.setScalar(e.spawn < 1 ? 1e-4 : e.t.scale);
+  scene.add(e.root); items.push(e);
+  return e;
+}
+function footprint(e) {
+  const c = Math.abs(Math.cos(e.t.rot)), s = Math.abs(Math.sin(e.t.rot)), k = e.t.scale;
+  return { hx: (c * e.size.x + s * e.size.z) / 2 * k, hz: (s * e.size.x + c * e.size.z) / 2 * k };
+}
+function clampFloor(e) {
+  const { hx, hz } = footprint(e);
+  e.t.x = hx > R.w / 2 ? 0 : clamp(e.t.x, -R.w / 2 + hx, R.w / 2 - hx);
+  e.t.z = hz > R.d / 2 ? 0 : clamp(e.t.z, -R.d / 2 + hz, R.d / 2 - hz);
+}
+function collides(e) {
+  if (e.mount === 'flat') return false;
+  const a = footprint(e);
+  return items.some(o => {
+    if (o === e || o.dying != null || o.mount === 'flat') return false;
+    const b = footprint(o);
+    return Math.abs(e.t.x - o.t.x) < a.hx + b.hx - .03 && Math.abs(e.t.z - o.t.z) < a.hz + b.hz - .03;
   });
-});
-document.getElementById('createObjBtn').onclick = () => {
-  const shape = document.getElementById('customShape').value;
-  const sx = parseFloat(document.getElementById('customX').value);
-  const sy = parseFloat(document.getElementById('customY').value);
-  const sz = parseFloat(document.getElementById('customZ').value);
-  const color = document.getElementById('customColor').value;
-  const name = document.getElementById('customName').value.trim() || ('Custom ' + shape.charAt(0).toUpperCase() + shape.slice(1));
-  const group = buildCustom(shape, sx, sy, sz, color);
-  spawnEntry(name, group, color);
-};
-
-/* ================= FURNITURE MANAGEMENT ================= */
-let furniture = [];
-let selected = null;
-const colorPalette = ['#8a3b3b','#c9a468','#5b7a99','#c7d0e0','#7a5230','#f0d98c','#3f7a3f','#111111','#e8e2d4','#cdb98f','#4a4a4a','#ffffff'];
-
-const swatchesEl = document.getElementById('colorSwatches');
-colorPalette.forEach(c => {
-  const sw = document.createElement('div');
-  sw.className = 'swatch';
-  sw.style.background = c;
-  sw.onclick = () => applyColor(c);
-  swatchesEl.appendChild(sw);
-});
-
-function spawnEntry(name, group, color) {
-  group.position.set((Math.random() - 0.5) * 2, 0, (Math.random() - 0.5) * 2);
-  addShadow(group);
-  scene.add(group);
-  const entry = { group, type: name, color };
-  furniture.push(entry);
-  select(entry);
 }
-
-function select(entry) {
-  selected = entry;
-  document.getElementById('noSelection').style.display = 'none';
-  document.getElementById('objectPanel').style.display = 'block';
-  document.getElementById('selectedName').textContent = entry.type;
-  document.getElementById('objX').value = entry.group.position.x;
-  document.getElementById('objZ').value = entry.group.position.z;
-  document.getElementById('objRot').value = entry.group.rotation.y;
-  document.getElementById('objScale').value = entry.group.scale.x;
-  document.getElementById('objColor').value = entry.color;
-  document.getElementById('objShine').value = 0.4;
-}
-function deselect() {
-  selected = null;
-  document.getElementById('noSelection').style.display = 'block';
-  document.getElementById('objectPanel').style.display = 'none';
-}
-function applyColor(c) {
-  if (!selected) return;
-  selected.color = c;
-  document.getElementById('objColor').value = c;
-  selected.group.traverse(m => { if (m.isMesh) m.material.color.set(c); });
-}
-
-['objX','objZ','objRot','objScale'].forEach(id => {
-  document.getElementById(id).addEventListener('input', () => {
-    if (!selected) return;
-    selected.group.position.x = parseFloat(document.getElementById('objX').value);
-    selected.group.position.z = parseFloat(document.getElementById('objZ').value);
-    selected.group.rotation.y = parseFloat(document.getElementById('objRot').value);
-    const s = parseFloat(document.getElementById('objScale').value);
-    selected.group.scale.set(s, s, s);
-  });
-});
-document.getElementById('objColor').addEventListener('input', e => applyColor(e.target.value));
-document.getElementById('objShine').addEventListener('input', e => {
-  if (!selected) return;
-  const v = parseFloat(e.target.value);
-  selected.group.traverse(m => { if (m.isMesh) { m.material.roughness = 1 - v; m.material.metalness = v * 0.4; } });
-});
-document.getElementById('deleteBtn').addEventListener('click', () => {
-  if (!selected) return;
-  scene.remove(selected.group);
-  furniture = furniture.filter(f => f !== selected);
-  deselect();
-});
-
-/* ================= POINTER: ORBIT CAMERA + DIRECT DRAG ================= */
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-let pointerMode = null; // 'camera' | 'object'
-let lastX = 0, lastY = 0;
-let dragOffset = new THREE.Vector3();
-
-function setMouse(e) {
-  const rect = renderer.domElement.getBoundingClientRect();
-  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-}
-
-renderer.domElement.addEventListener('pointerdown', e => {
-  setMouse(e);
-  raycaster.setFromCamera(mouse, camera);
-  const hits = raycaster.intersectObjects(furniture.map(f => f.group), true);
-  if (hits.length) {
-    let obj = hits[0].object;
-    while (obj.parent && !furniture.find(f => f.group === obj)) obj = obj.parent;
-    const entry = furniture.find(f => f.group === obj);
-    if (entry) {
-      select(entry);
-      pointerMode = 'object';
-      const hitPoint = new THREE.Vector3();
-      raycaster.ray.intersectPlane(groundPlane, hitPoint);
-      dragOffset.copy(entry.group.position).sub(hitPoint);
-      return;
-    }
+function findFreeSpot(e, px, pz) {
+  const st = .25, max = Math.ceil(Math.max(R.w, R.d) / st);
+  for (let r = 0; r <= max; r++) for (let i = -r; i <= r; i++) for (let j = -r; j <= r; j++) {
+    if (Math.max(Math.abs(i), Math.abs(j)) !== r) continue;
+    e.t.x = px + i * st; e.t.z = pz + j * st; clampFloor(e);
+    if (!collides(e)) return;
   }
-  pointerMode = 'camera';
-  lastX = e.clientX; lastY = e.clientY;
-});
+  e.t.x = px; e.t.z = pz; clampFloor(e);
+}
+function killEntry(e) { if (e.dying == null) e.dying = 0; if (hovered === e) hovered = null; }
+function disposeEntry(e) {
+  scene.remove(e.root);
+  e.root.traverse(o => {
+    if (!o.isMesh) return; o.geometry.dispose();
+    (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { if (m.map && !m.map.userData.shared) m.map.dispose(); m.dispose(); });
+  });
+  items.splice(items.indexOf(e), 1);
+}
+function entryData(e) {
+  return { id: e.id, type: e.type, name: e.name, color: e.color, finish: e.finish, seed: e.seed, custom: e.custom,
+    x: +e.t.x.toFixed(3), z: +e.t.z.toFixed(3), rot: +e.t.rot.toFixed(4), scale: +e.t.scale.toFixed(3) };
+}
+function applyColor(e, c) { e.color = c; e.pm.color.set(c); }
+function applyFinish(e, f) { e.finish = f; e.pm.roughness = FINISHES[f][0]; e.pm.metalness = FINISHES[f][1]; }
 
-window.addEventListener('pointermove', e => {
-  if (pointerMode === 'object' && selected) {
-    setMouse(e);
-    raycaster.setFromCamera(mouse, camera);
-    const hitPoint = new THREE.Vector3();
-    if (raycaster.ray.intersectPlane(groundPlane, hitPoint)) {
-      const target = hitPoint.add(dragOffset);
-      const maxX = room.width / 2 - 0.3, maxZ = room.depth / 2 - 0.3;
-      target.x = Math.max(-maxX, Math.min(maxX, target.x));
-      target.z = Math.max(-maxZ, Math.min(maxZ, target.z));
-      selected.group.position.x = target.x;
-      selected.group.position.z = target.z;
-      document.getElementById('objX').value = target.x;
-      document.getElementById('objZ').value = target.z;
-    }
-  } else if (pointerMode === 'camera') {
-    camTheta -= (e.clientX - lastX) * 0.006;
-    camPhi -= (e.clientY - lastY) * 0.006;
-    lastX = e.clientX; lastY = e.clientY;
-    updateCamera();
+/* ================= snapshots / history ================= */
+const snapshot = () => JSON.stringify({ v: 1, room: { ...R }, light: { ...L }, items: items.filter(e => e.dying == null).map(entryData) });
+function applySnapshot(src, { animate = true } = {}) {
+  const s = typeof src === 'string' ? JSON.parse(src) : src;
+  const roomChanged = ['wallPattern', 'wallA', 'wallB', 'floorPattern', 'floorA', 'floorB'].some(k => s.room?.[k] && s.room[k] !== R[k]);
+  Object.assign(R, s.room || {}); Object.assign(L, s.light || {});
+  if (roomChanged || !floorMat.map) refreshRoomTextures();
+  buildGrid(); updateShadowCam();
+  const keep = new Set();
+  (s.items || []).forEach((d, i) => {
+    if (!CATALOG[d.type]) return;
+    let e = items.find(x => x.id === d.id && x.dying == null);
+    if (e && JSON.stringify(e.custom) === JSON.stringify(d.custom || null) && e.type === d.type) {
+      e.name = d.name || e.def.name; applyColor(e, d.color || e.def.color); applyFinish(e, d.finish || e.def.finish);
+      Object.assign(e.t, { x: d.x ?? 0, z: d.z ?? 0, rot: d.rot ?? 0, scale: d.scale ?? 1 }); clampFloor(e);
+    } else { if (e) killEntry(e); e = createEntry(d, { animate, delay: animate ? i * .05 : 0 }); }
+    if (e) keep.add(e);
+  });
+  for (const e of [...items]) if (!keep.has(e)) killEntry(e);
+  if (selected && !keep.has(selected)) select(null); else fillInspector();
+  syncRoomUI(); refreshCounts();
+}
+const history = { past: [], future: [], current: null };
+function commit() {
+  const snap = snapshot(); if (snap === history.current) return;
+  if (history.current) history.past.push(history.current);
+  if (history.past.length > 80) history.past.shift();
+  history.current = snap; history.future.length = 0;
+  store.set('atelier.scene', snap); updateUndo(); refreshCounts();
+}
+let commitTimer; const commitSoon = () => { clearTimeout(commitTimer); commitTimer = setTimeout(commit, 350); };
+function undo() { if (!history.past.length) return; history.future.push(history.current); history.current = history.past.pop(); applySnapshot(history.current); store.set('atelier.scene', history.current); updateUndo(); toast('Undone', { icon: 'undo' }); }
+function redo() { if (!history.future.length) return; history.past.push(history.current); history.current = history.future.pop(); applySnapshot(history.current); store.set('atelier.scene', history.current); updateUndo(); toast('Redone', { icon: 'redo' }); }
+function updateUndo() { $('#undoBtn').disabled = !history.past.length; $('#redoBtn').disabled = !history.future.length; }
+
+/* ================= camera + pointer ================= */
+const raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2(), ground = new THREE.Plane(new V3(0, 1, 0), 0), tmp = new V3();
+function setRay(ev) {
+  const r = renderer.domElement.getBoundingClientRect();
+  ndc.set((ev.clientX - r.left) / r.width * 2 - 1, -(ev.clientY - r.top) / r.height * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+}
+function pick() {
+  const hits = raycaster.intersectObjects(items.filter(e => e.dying == null).map(e => e.root), true);
+  for (const h of hits) { let o = h.object; while (o && !o.userData.entry) o = o.parent; if (o) return o.userData.entry; }
+  return null;
+}
+// registered BEFORE OrbitControls so grabbing furniture can disable orbiting
+renderer.domElement.addEventListener('pointerdown', ev => {
+  if (ev.button !== 0) return;
+  camTween = null; setRay(ev);
+  const e = pick();
+  if (e) {
+    select(e); controls.enabled = false;
+    const p = raycaster.ray.intersectPlane(ground, new V3()) || new V3(e.t.x, 0, e.t.z);
+    drag = { e, sx: ev.clientX, sy: ev.clientY, active: false, off: new V3(e.t.x - p.x, 0, e.t.z - p.z) };
+  } else down = { x: ev.clientX, y: ev.clientY };
+});
+const controls = new OrbitControls(camera, renderer.domElement);
+Object.assign(controls, { enableDamping: true, dampingFactor: .08, minDistance: .6, maxDistance: 40, maxPolarAngle: Math.PI / 2 - .03, rotateSpeed: .7, zoomToCursor: true });
+controls.addEventListener('start', () => { camTween = null; });
+
+window.addEventListener('pointermove', ev => {
+  if (drag) {
+    if (!drag.active && Math.hypot(ev.clientX - drag.sx, ev.clientY - drag.sy) > 3) { drag.active = true; drag.e.dragging = true; document.body.classList.add('dragging'); }
+    if (!drag.active) return;
+    setRay(ev);
+    const p = raycaster.ray.intersectPlane(ground, tmp); if (!p) return;
+    let x = p.x + drag.off.x, z = p.z + drag.off.z;
+    if (P.snap) { x = Math.round(x / .25) * .25; z = Math.round(z / .25) * .25; }
+    drag.e.t.x = x; drag.e.t.z = z; clampFloor(drag.e); syncTransformUI();
+    return;
+  }
+  if (ev.buttons === 0 && ev.target === renderer.domElement) { setRay(ev); hovered = pick(); document.body.classList.toggle('hovering', !!hovered); }
+});
+window.addEventListener('pointerup', ev => {
+  if (drag) {
+    const was = drag.active; drag.e.dragging = false; drag = null; controls.enabled = true;
+    document.body.classList.remove('dragging'); if (was) commit();
+  } else if (down) {
+    if (ev.target === renderer.domElement && Math.hypot(ev.clientX - down.x, ev.clientY - down.y) < 4) select(null);
+    down = null;
   }
 });
-window.addEventListener('pointerup', () => { pointerMode = null; });
+renderer.domElement.addEventListener('dblclick', ev => { setRay(ev); const e = pick(); if (e) focusOn(e); });
 
-/* ================= ROOM CONTROLS ================= */
-['roomW','roomD','roomH'].forEach(id => {
-  document.getElementById(id).addEventListener('input', () => {
-    room.width = parseFloat(document.getElementById('roomW').value);
-    room.depth = parseFloat(document.getElementById('roomD').value);
-    room.height = parseFloat(document.getElementById('roomH').value);
-    document.getElementById('roomWVal').textContent = room.width;
-    document.getElementById('roomDVal').textContent = room.depth;
-    document.getElementById('roomHVal').textContent = room.height;
-    buildRoom();
-  });
-});
-['wallPattern','wallColor','wallColor2','floorPattern','floorColor','floorColor2'].forEach(id => {
-  document.getElementById(id).addEventListener('input', buildRoom);
-});
-document.getElementById('lightIntensity').addEventListener('input', e => { sun.intensity = parseFloat(e.target.value); });
-document.getElementById('lightColor').addEventListener('input', e => { sun.color.set(e.target.value); });
+let camTween = null;
+function flyTo(target, sph, dur = 1) {
+  camTween = { t: 0, dur, fromT: controls.target.clone(), toT: target.clone(), from: new THREE.Spherical().setFromVector3(camera.position.clone().sub(controls.target)), to: sph };
+}
+function setView(v) {
+  $$('#viewSeg button').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  const span = Math.max(R.w, R.d);
+  if (v === '3d') flyTo(new V3(0, .5, 0), new THREE.Spherical(span * 1.25 + 3.5, .95, Math.PI / 4));
+  else if (v === 'top') flyTo(new V3(0, 0, 0), new THREE.Spherical(span * 1.35 + 3, .0001, 0));
+  else if (v === 'front') flyTo(new V3(0, R.h * .4, 0), new THREE.Spherical(span * 1.2 + 3.5, 1.18, 0));
+  else if (v === 'eye') { const tg = new V3(0, 1.15, -R.d / 2 + 1); flyTo(tg, new THREE.Spherical().setFromVector3(new V3(R.w * .2, 1.6, R.d / 2 - .3).sub(tg))); }
+}
+function focusOn(e) {
+  const s = Math.max(e.size.x, e.size.y, e.size.z) * e.t.scale, cur = new THREE.Spherical().setFromVector3(camera.position.clone().sub(controls.target));
+  flyTo(new V3(e.t.x, e.size.y * e.t.scale / 2, e.t.z), new THREE.Spherical(s * 2.4 + 1.4, clamp(cur.phi, .6, 1.2), cur.theta), .8);
+}
 
-/* ================= INIT ================= */
-buildRoom();
-resize();
-updateCamera();
-spawnEntry('Sofa', builders.Sofa(defaultColors.Sofa), defaultColors.Sofa);
-spawnEntry('Table', builders.Table(defaultColors.Table), defaultColors.Table);
-spawnEntry('Chair', builders.Chair(defaultColors.Chair), defaultColors.Chair);
-deselect();
+/* ================= selection outline ================= */
+function makeOutline(color, fill) {
+  const geo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), g = new THREE.Group();
+  const f = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: fill, depthWrite: false, toneMapped: false }));
+  const l = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color, transparent: true, opacity: .9, depthWrite: false, toneMapped: false }));
+  g.add(f, l); g.visible = false; scene.add(g); return { g, f, l };
+}
+const selOutline = makeOutline(0xe2bf7e, .14), hovOutline = makeOutline(0xffffff, 0);
+function placeOutline(o, e, pad) {
+  if (!e || e.dying != null) { o.g.visible = false; return; }
+  const s = e.inner.scale.x; o.g.visible = true;
+  o.g.position.set(e.root.position.x, e.mount === 'flat' ? .016 : .008, e.root.position.z);
+  o.g.rotation.set(0, e.inner.rotation.y, 0);
+  o.g.scale.set(e.size.x * s + pad, 1, e.size.z * s + pad);
+}
 
-function animate() {
-  requestAnimationFrame(animate);
+/* ================= lighting / time ================= */
+let sceneBg = new THREE.Color();
+function updateLighting(dt) {
+  const t = P.time, s = Math.sin(Math.PI * (t - 6) / 12), day = smoothstep(-.08, .3, s);
+  const golden = 1 - smoothstep(.05, .55, Math.max(s, 0)), el = Math.max(s, 0) * 1.05 + .1, az = Math.PI * (t - 6) / 12;
+  const dir = day > .02 ? new V3(Math.cos(az) * Math.cos(el), Math.sin(el), .55 * Math.cos(el) + .2) : new V3(-.35, .9, .45);
+  sun.position.copy(dir.normalize().multiplyScalar(18));
+  const sunCol = new THREE.Color(mix(mix('#fff6ea', '#ffd9b0', L.warmth * .6), '#ff9a55', golden * .85));
+  sun.color.set('#8fa6ff').lerp(sunCol, day);
+  sun.intensity = L.brightness * lerp(.35, 3.2, day);
+  hemi.color.set(mix('#2b3557', '#dfe9ff', day)); hemi.intensity = L.brightness * lerp(.2, .6, day);
+  scene.environmentIntensity = L.brightness * lerp(.12, .42, day);
+  const target = L.lamps === 'on' ? 1 : L.lamps === 'off' ? 0 : smoothstep(.7, .1, day);
+  lampLevel = damp(lampLevel, target, 4, dt);
+  const lampCol = mix('#fff1dc', '#ffb46a', L.warmth);
+  for (const e of items) if (e.fx.light) {
+    e.fx.light.intensity = lampLevel * 6 * L.brightness; e.fx.light.color.set(lampCol);
+    e.fx.bulb.emissive.set(lampCol); e.fx.bulb.emissiveIntensity = .2 + lampLevel * 3;
+    e.fx.glow.emissive.set(e.color).multiplyScalar(lampLevel * .5);
+  }
+  scene.background = sceneBg.clone().lerp(new THREE.Color('#05070d'), (1 - day) * .45);
+}
+function applyTheme() {
+  document.documentElement.dataset.theme = P.theme;
+  sceneBg = new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue('--scene-bg').trim());
+  $('#themeBtn').innerHTML = icon(P.theme === 'dark' ? 'sun' : 'moon');
+  $('#themeBtn').dataset.tip = P.theme === 'dark' ? 'Light theme' : 'Dark theme';
+  contact.material.opacity = P.theme === 'dark' ? 1 : .45;
+}
+function setTime(t) {
+  P.time = (t + 24) % 24; setRange('timeSlider', P.time);
+  const h = Math.floor(P.time), m = Math.floor((P.time % 1) * 60);
+  $('#timeLabel').textContent = `${(h + 11) % 12 + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+  const isDay = String(Math.sin(Math.PI * (P.time - 6) / 12) > 0);
+  if ($('#timeIcon').dataset.k !== isDay) { $('#timeIcon').dataset.k = isDay; $('#timeIcon').innerHTML = icon(isDay === 'true' ? 'sun' : 'moon'); }
+}
+
+/* ================= main loop ================= */
+const clock = new THREE.Clock();
+const ctxbar = $('#ctxbar');
+function frame() {
+  const dt = Math.min(clock.getDelta(), .05);
+  RC.w = damp(RC.w, R.w, 10, dt); RC.d = damp(RC.d, R.d, 10, dt); RC.h = damp(RC.h, R.h, 10, dt);
+  const low = .12 / R.h, c = camera.position;
+  for (const k of WALLS) {
+    const outside = k === 'back' ? c.z < -RC.d / 2 : k === 'front' ? c.z > RC.d / 2 : k === 'left' ? c.x < -RC.w / 2 : c.x > RC.w / 2;
+    walls[k].f = damp(walls[k].f, P.walls === 'up' ? 1 : P.walls === 'down' ? low : outside ? low : 1, 9, dt);
+  }
+  layoutRoom();
+  if (playing) setTime(P.time + dt * .6);
+  updateLighting(dt);
+
+  if (camTween) {
+    const tw = camTween; tw.t = Math.min(1, tw.t + dt / tw.dur); const k = easeInOut(tw.t);
+    controls.target.lerpVectors(tw.fromT, tw.toT, k);
+    camera.position.setFromSpherical(new THREE.Spherical(lerp(tw.from.radius, tw.to.radius, k), lerp(tw.from.phi, tw.to.phi, k), tw.from.theta + wrapAngle(tw.to.theta - tw.from.theta) * k)).add(controls.target);
+    if (tw.t >= 1) camTween = null;
+  }
+  controls.target.x = clamp(controls.target.x, -R.w / 2 - 1, R.w / 2 + 1); controls.target.z = clamp(controls.target.z, -R.d / 2 - 1, R.d / 2 + 1);
+  controls.update();
+
+  for (const e of [...items]) {
+    clampFloor(e);
+    const p = e.root.position, px = p.x, pz = p.z, k = e.dragging ? 22 : 14;
+    p.x = damp(p.x, e.t.x, k, dt); p.z = damp(p.z, e.t.z, k, dt);
+    p.y = damp(p.y, e.dragging ? (e.mount === 'flat' ? .015 : .07) : 0, 16, dt);
+    if (e.mount !== 'flat' && dt > 0) {
+      e.tilt.x = damp(e.tilt.x, clamp(-(p.z - pz) / dt * .035, -.12, .12), 10, dt);
+      e.tilt.z = damp(e.tilt.z, clamp((p.x - px) / dt * .035, -.12, .12), 10, dt);
+      e.root.rotation.set(e.tilt.x, 0, e.tilt.z);
+    }
+    e.inner.rotation.y = dampAngle(e.inner.rotation.y, e.t.rot, 14, dt);
+    e.curScale = damp(e.curScale, e.t.scale, 14, dt);
+    let s = e.curScale;
+    if (e.spawn < 1) { e.spawn = Math.min(1, e.spawn + dt / .55); const q = clamp(e.spawn, 0, 1); s *= Math.max(1e-4, easeOutBack(q)); e.inner.position.y = (1 - q) * (1 - q) * .45; }
+    else e.inner.position.y = 0;
+    if (e.dying != null) { e.dying += dt / .28; s *= Math.max(1e-4, 1 - easeInBack(Math.min(1, e.dying))); if (e.dying >= 1) { disposeEntry(e); continue; } }
+    e.inner.scale.setScalar(s);
+  }
+
+  placeOutline(selOutline, selected, .14);
+  placeOutline(hovOutline, hovered && hovered !== selected && !drag ? hovered : null, .1);
+  if (selected) {
+    const warn = selected.mount !== 'flat' && collides(selected);
+    selOutline.f.material.color.set(warn ? 0xef6f61 : 0xe2bf7e); selOutline.l.material.color.copy(selOutline.f.material.color);
+    selOutline.f.material.opacity = .1 + Math.sin(performance.now() / 300) * .05;
+    $('#inspWarn').hidden = !warn;
+  }
+  hovOutline.l.material.opacity = .35;
+  grid.material.opacity = damp(grid.material.opacity, drag?.active && P.snap ? .35 : 0, 10, dt);
+
+  if (selected && !drag?.active && selected.dying == null) {
+    tmp.set(selected.root.position.x, selected.size.y * selected.inner.scale.x + .25, selected.root.position.z).project(camera);
+    const x = (tmp.x * .5 + .5) * innerWidth, y = Math.max(96, (-tmp.y * .5 + .5) * innerHeight);
+    ctxbar.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
+    ctxbar.classList.toggle('show', tmp.z < 1);
+  } else ctxbar.classList.remove('show');
+
   renderer.render(scene, camera);
 }
-animate();
+function resize() {
+  renderer.setSize(innerWidth, innerHeight, false);
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+
+/* ================= UI ================= */
+function fillRange(el) { el.style.setProperty('--p', (el.value - el.min) / (el.max - el.min) * 100 + '%'); }
+document.addEventListener('input', ev => { if (ev.target.type === 'range') fillRange(ev.target); });
+function setRange(id, v) { const el = $('#' + id); el.value = v; fillRange(el); }
+
+function toast(msg, { icon: ic = 'bulb', action, onAction } = {}) {
+  const el = document.createElement('div'); el.className = 'toast' + (action ? '' : ' solo');
+  el.innerHTML = icon(ic) + '<span></span>'; el.querySelector('span').textContent = msg;
+  const close = () => { el.classList.add('out'); setTimeout(() => el.remove(), 300); };
+  if (action) { const b = document.createElement('button'); b.textContent = action; b.onclick = () => { onAction(); close(); }; el.append(b); }
+  const box = $('#toasts'); box.append(el); while (box.children.length > 3) box.firstChild.remove();
+  setTimeout(close, action ? 4200 : 2200);
+}
+
+$$('.tab').forEach(t => t.addEventListener('click', () => {
+  $$('.tab').forEach(x => x.classList.toggle('active', x === t));
+  $$('.tab-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === t.dataset.tab));
+}));
+
+/* catalog */
+let catFilter = 'All', catQuery = '';
+$('#chips').innerHTML = CATS.map(c => `<button class="chip${c === 'All' ? ' active' : ''}" data-c="${c}">${c}</button>`).join('');
+$('#chips').addEventListener('click', ev => { const b = ev.target.closest('.chip'); if (!b) return; catFilter = b.dataset.c; $$('.chip').forEach(x => x.classList.toggle('active', x === b)); renderCatalog(); });
+$('#search').addEventListener('input', ev => { catQuery = ev.target.value.trim().toLowerCase(); renderCatalog(); });
+const defSizes = {};
+for (const [k, d] of Object.entries(CATALOG)) {
+  if (d.hidden) continue;
+  const g = new THREE.Group(); d.build(g, primaryMat('#fff', 'matte'), { rnd: rng(1) });
+  defSizes[k] = new THREE.Box3().setFromObject(g).getSize(new V3());
+  g.traverse(o => { if (o.isMesh) o.geometry.dispose(); });
+}
+function renderCatalog() {
+  const box = $('#catalog'); box.innerHTML = ''; let n = 0;
+  for (const [k, d] of Object.entries(CATALOG)) {
+    if (d.hidden || (catFilter !== 'All' && d.cat !== catFilter) || (catQuery && !(d.name + ' ' + d.cat).toLowerCase().includes(catQuery))) continue;
+    const s = defSizes[k], card = document.createElement('button');
+    card.className = 'card'; card.style.animationDelay = n++ * 25 + 'ms';
+    card.innerHTML = `<div class="card-ic">${icon(d.icon)}</div><div class="card-name">${d.name}</div><div class="card-dims">${fmt(s.x, 1)} × ${fmt(s.z, 1)} m</div><span class="card-add">${icon('plus')}</span>`;
+    card.onclick = () => addItem({ type: k });
+    box.append(card);
+  }
+  if (!n) box.innerHTML = '<p class="empty" style="grid-column:span 2">Nothing matches that search.</p>';
+}
+function addItem(data) {
+  const e = createEntry(data);
+  raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+  const p = raycaster.ray.intersectPlane(ground, new V3()) || new V3();
+  p.x = clamp(p.x, -R.w / 2, R.w / 2); p.z = clamp(p.z, -R.d / 2, R.d / 2);
+  if (e.mount === 'flat') { e.t.x = p.x; e.t.z = p.z; clampFloor(e); } else findFreeSpot(e, p.x, p.z);
+  e.root.position.set(e.t.x, 0, e.t.z);
+  select(e); commit();
+  toast(`${e.name} added`, { icon: 'plus', action: 'Undo', onAction: undo });
+  if (innerWidth < 860) document.body.classList.remove('panel-open');
+}
+
+/* room */
+const STYLES = {
+  nordic: { name: 'Nordic', wallPattern: 'plaster', wallA: '#ece8e1', wallB: '#d9d2c6', floorPattern: 'wood', floorA: '#d6b48a', floorB: '#b98f62' },
+  industrial: { name: 'Industrial', wallPattern: 'brick', wallA: '#9c5b44', wallB: '#cfc6ba', floorPattern: 'concrete', floorA: '#9a9690', floorB: '#77736d' },
+  luxe: { name: 'Midnight Luxe', wallPattern: 'panels', wallA: '#22303a', wallB: '#c9a45c', floorPattern: 'marble', floorA: '#e9e6e1', floorB: '#6f6a64' },
+  coastal: { name: 'Coastal', wallPattern: 'stripes', wallA: '#f3f3ef', wallB: '#cfe0e6', floorPattern: 'wood', floorA: '#e2d6c2', floorB: '#c9b99e' },
+  sage: { name: 'Sage', wallPattern: 'panels', wallA: '#a8b59d', wallB: '#8f9e85', floorPattern: 'wood', floorA: '#c79f6f', floorB: '#a77f52' },
+  gallery: { name: 'Gallery', wallPattern: 'plaster', wallA: '#f5f4f1', wallB: '#e6e3dd', floorPattern: 'checker', floorA: '#f0ede8', floorB: '#2b2b2e' },
+};
+for (const [k, st] of Object.entries(STYLES)) {
+  const b = document.createElement('button'); b.className = 'style-card'; b.dataset.k = k;
+  const c = document.createElement('canvas'); c.width = 240; c.height = 150; const ctx = c.getContext('2d');
+  ctx.fillStyle = ctx.createPattern(patternCanvas(WALL_PATTERNS[st.wallPattern], st.wallA, st.wallB, 96), 'repeat'); ctx.fillRect(0, 0, 240, 93);
+  ctx.fillStyle = ctx.createPattern(patternCanvas(FLOOR_PATTERNS[st.floorPattern], st.floorA, st.floorB, 96), 'repeat'); ctx.fillRect(0, 93, 240, 57);
+  ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(0, 90, 240, 3);
+  const g = ctx.createLinearGradient(0, 0, 0, 150); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(.62, 'rgba(0,0,0,.1)'); g.addColorStop(.63, 'rgba(0,0,0,.22)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 240, 150);
+  const meta = document.createElement('div'); meta.className = 'meta';
+  meta.innerHTML = `<b>${st.name}</b><span>${WALL_PATTERNS[st.wallPattern].label} · ${FLOOR_PATTERNS[st.floorPattern].label}</span>`;
+  b.append(c, meta);
+  b.onclick = () => { const { name, ...room } = st; Object.assign(R, room); refreshRoomTextures(); syncRoomUI(); commit(); toast(`${name} style applied`, { icon: 'room', action: 'Undo', onAction: undo }); };
+  $('#styles').append(b);
+}
+function patternChip(key, p, kind) {
+  const b = document.createElement('button'); b.className = 'pattern'; b.dataset.key = key; b.dataset.kind = kind;
+  const c = document.createElement('canvas'); c.width = c.height = 96;
+  const lbl = document.createElement('span'); lbl.textContent = p.label; b.append(c, lbl);
+  b.onclick = () => { R[kind + 'Pattern'] = key; refreshRoomTextures(); syncRoomUI(); commit(); };
+  return b;
+}
+Object.entries(WALL_PATTERNS).forEach(([k, p]) => $('#wallPatterns').append(patternChip(k, p, 'wall')));
+Object.entries(FLOOR_PATTERNS).forEach(([k, p]) => $('#floorPatterns').append(patternChip(k, p, 'floor')));
+function drawThumbs() {
+  $$('.pattern').forEach(b => {
+    const w = b.dataset.kind === 'wall', p = (w ? WALL_PATTERNS : FLOOR_PATTERNS)[b.dataset.key];
+    p.draw(b.querySelector('canvas').getContext('2d', { willReadFrequently: true }), 96, w ? R.wallA : R.floorA, w ? R.wallB : R.floorB, rng(7));
+  });
+}
+function syncRoomUI() {
+  setRange('roomW', R.w); setRange('roomD', R.d); setRange('roomH', R.h);
+  $('#roomWVal').textContent = fmt(R.w, 1) + ' m'; $('#roomDVal').textContent = fmt(R.d, 1) + ' m'; $('#roomHVal').textContent = fmt(R.h, 2) + ' m';
+  $('#areaStat').textContent = fmt(R.w * R.d, 1);
+  for (const k of ['wallA', 'wallB', 'floorA', 'floorB']) { $('#' + k).value = R[k]; $('#' + k + 'Code').textContent = R[k]; }
+  $$('.pattern').forEach(b => b.classList.toggle('active', R[b.dataset.kind + 'Pattern'] === b.dataset.key));
+  $$('.style-card').forEach(b => { const st = STYLES[b.dataset.k]; b.classList.toggle('active', Object.keys(st).every(k => k === 'name' || st[k] === R[k])); });
+  setRange('bright', L.brightness); $('#brightVal').textContent = Math.round(L.brightness * 100) + '%';
+  setRange('warmth', L.warmth); $('#warmthVal').textContent = L.warmth < .33 ? 'Cool' : L.warmth < .66 ? 'Neutral' : 'Warm';
+  $$('#lampSeg button').forEach(b => b.classList.toggle('active', b.dataset.v === L.lamps));
+}
+function refreshCounts() { $('#countStat').textContent = items.filter(e => e.dying == null).length; }
+for (const id of ['roomW', 'roomD', 'roomH']) {
+  $('#' + id).addEventListener('input', ev => { R[id.slice(-1).toLowerCase()] = +ev.target.value; syncRoomUI(); buildGrid(); updateShadowCam(); });
+  $('#' + id).addEventListener('change', commit);
+}
+let texQueued = false;
+for (const id of ['wallA', 'wallB', 'floorA', 'floorB']) {
+  $('#' + id).addEventListener('input', ev => {
+    R[id] = ev.target.value; $('#' + id + 'Code').textContent = R[id];
+    if (!texQueued) { texQueued = true; requestAnimationFrame(() => { texQueued = false; refreshRoomTextures(); }); }
+  });
+  $('#' + id).addEventListener('change', () => { syncRoomUI(); commit(); });
+}
+$('#bright').addEventListener('input', ev => { L.brightness = +ev.target.value; syncRoomUI(); });
+$('#warmth').addEventListener('input', ev => { L.warmth = +ev.target.value; syncRoomUI(); });
+$('#bright').addEventListener('change', commit); $('#warmth').addEventListener('change', commit);
+$('#lampSeg').addEventListener('click', ev => { const b = ev.target.closest('button'); if (!b) return; L.lamps = b.dataset.v; syncRoomUI(); commit(); });
+
+/* create */
+let cShape = 'box';
+$('#shapeSeg').addEventListener('click', ev => { const b = ev.target.closest('button'); if (!b) return; cShape = b.dataset.v; $$('#shapeSeg button').forEach(x => x.classList.toggle('active', x === b)); });
+for (const id of ['cW', 'cH', 'cD']) { const upd = () => $('#' + id + 'Val').textContent = fmt($('#' + id).value) + ' m'; $('#' + id).addEventListener('input', upd); upd(); fillRange($('#' + id)); }
+$('#cColor').addEventListener('input', ev => $('#cColorCode').textContent = ev.target.value);
+$('#createBtn').onclick = () => {
+  const label = cShape === 'rounded' ? 'soft box' : cShape;
+  addItem({ type: 'custom', name: $('#cName').value.trim() || 'Custom ' + label, color: $('#cColor').value, finish: 'satin',
+    custom: { shape: cShape, w: +$('#cW').value, h: +$('#cH').value, d: +$('#cD').value } });
+};
+
+/* inspector */
+const SWATCHES = ['#f1eee8', '#d9cfc0', '#b9a58a', '#8b6a4f', '#4a3527', '#2b2b2e', '#6f7f72', '#a8b59d', '#3d5a73', '#9fb7c9', '#8a3b3b', '#c46f4e', '#e0b0a0', '#d8b674', '#7d6a8a', '#2f3640'];
+$('#swatches').innerHTML = SWATCHES.map(c => `<button class="swatch" data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join('');
+$('#finishes').innerHTML = Object.entries(FINISHES).map(([k, f]) => `<button class="finish" data-f="${k}"><i class="f-${k}"></i>${f[2]}</button>`).join('');
+$('#swatches').addEventListener('click', ev => { const b = ev.target.closest('.swatch'); if (!b || !selected) return; applyColor(selected, b.dataset.c); fillInspector(); commit(); });
+$('#objColor').addEventListener('input', ev => { if (!selected) return; applyColor(selected, ev.target.value); $('#objColorCode').textContent = ev.target.value; });
+$('#objColor').addEventListener('change', () => { fillInspector(); commit(); });
+$('#finishes').addEventListener('click', ev => { const b = ev.target.closest('.finish'); if (!b || !selected) return; applyFinish(selected, b.dataset.f); fillInspector(); commit(); });
+$('#inspName').addEventListener('input', ev => { if (selected) selected.name = ev.target.value || selected.def.name; });
+$('#inspName').addEventListener('change', commit);
+$('#inspClose').onclick = () => select(null);
+$('#objRot').addEventListener('input', ev => { if (!selected) return; selected.t.rot = +ev.target.value * Math.PI / 180; syncTransformUI(); });
+$('#objScale').addEventListener('input', ev => { if (!selected) return; selected.t.scale = +ev.target.value; syncTransformUI(); });
+$('#objX').addEventListener('input', ev => { if (!selected) return; selected.t.x = +ev.target.value; clampFloor(selected); syncTransformUI(); });
+$('#objZ').addEventListener('input', ev => { if (!selected) return; selected.t.z = +ev.target.value; clampFloor(selected); syncTransformUI(); });
+['objRot', 'objScale', 'objX', 'objZ'].forEach(id => $('#' + id).addEventListener('change', commit));
+const rotate = deg => { if (!selected) return; selected.t.rot = wrapAngle(Math.round((selected.t.rot + deg * Math.PI / 180) * 180 / Math.PI) * Math.PI / 180); syncTransformUI(); commitSoon(); };
+$('#rotL').onclick = () => rotate(45); $('#rotR').onclick = () => rotate(-45);
+function duplicate(e) {
+  if (!e) return; const d = entryData(e); d.id = uid();
+  const n = createEntry(d); findFreeSpot(n, e.t.x + .3, e.t.z + .3); n.root.position.set(n.t.x, 0, n.t.z);
+  select(n); commit(); toast(`${n.name} duplicated`, { icon: 'copy' });
+}
+function remove(e) { if (!e) return; killEntry(e); select(null); commit(); toast(`${e.name} deleted`, { icon: 'trash', action: 'Undo', onAction: undo }); }
+$('#dupBtn').onclick = () => duplicate(selected);
+$('#focusBtn').onclick = () => selected && focusOn(selected);
+$('#delBtn').onclick = () => remove(selected);
+ctxbar.addEventListener('click', ev => {
+  const a = ev.target.closest('[data-act]')?.dataset.act;
+  if (a === 'rotL') rotate(45); if (a === 'rotR') rotate(-45); if (a === 'dup') duplicate(selected); if (a === 'focus') focusOn(selected); if (a === 'del') remove(selected);
+});
+function select(e) {
+  selected = e || null;
+  $('#inspector').classList.toggle('open', !!selected);
+  if (selected) { fillInspector(); if (innerWidth < 860) document.body.classList.remove('panel-open'); }
+}
+function fillInspector() {
+  const e = selected; if (!e) return;
+  $('#inspIc').innerHTML = icon(e.def.icon);
+  if (document.activeElement !== $('#inspName')) $('#inspName').value = e.name;
+  $('#objColor').value = e.color; $('#objColorCode').textContent = e.color;
+  $$('.swatch').forEach(b => b.classList.toggle('active', b.dataset.c === e.color));
+  $$('.finish').forEach(b => b.classList.toggle('active', b.dataset.f === e.finish));
+  syncTransformUI();
+}
+function syncTransformUI() {
+  const e = selected; if (!e) return;
+  const deg = Math.round(wrapAngle(e.t.rot) * 180 / Math.PI);
+  setRange('objRot', deg); $('#objRotVal').textContent = deg + '°';
+  setRange('objScale', e.t.scale); $('#objScaleVal').textContent = Math.round(e.t.scale * 100) + '%';
+  $('#objX').min = -R.w / 2; $('#objX').max = R.w / 2; setRange('objX', e.t.x); $('#objXVal').textContent = fmt(e.t.x) + ' m';
+  $('#objZ').min = -R.d / 2; $('#objZ').max = R.d / 2; setRange('objZ', e.t.z); $('#objZVal').textContent = fmt(e.t.z) + ' m';
+  const s = e.t.scale; $('#inspDims').textContent = `${fmt(e.size.x * s)} × ${fmt(e.size.z * s)} × ${fmt(e.size.y * s)} m`;
+}
+
+/* top bar */
+$('#undoBtn').onclick = undo; $('#redoBtn').onclick = redo;
+$('#viewSeg').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b) setView(b.dataset.view); });
+$('#spinBtn').onclick = () => { controls.autoRotate = !controls.autoRotate; controls.autoRotateSpeed = .8; $('#spinBtn').classList.toggle('on', controls.autoRotate); };
+const WALL_MODES = { auto: ['AUTO', 'Walls: auto cutaway'], up: ['UP', 'Walls: always up'], down: ['LOW', 'Walls: always down'] };
+function syncWalls() { $('#wallsBadge').textContent = WALL_MODES[P.walls][0]; $('#wallsBtn').dataset.tip = WALL_MODES[P.walls][1] + ' (W)'; }
+function cycleWalls() { P.walls = { auto: 'up', up: 'down', down: 'auto' }[P.walls]; syncWalls(); savePrefs(); toast(WALL_MODES[P.walls][1], { icon: 'walls' }); }
+$('#wallsBtn').onclick = cycleWalls;
+function toggleSnap() { P.snap = !P.snap; $('#snapBtn').classList.toggle('on', P.snap); savePrefs(); toast(P.snap ? 'Snap to grid on' : 'Snap to grid off', { icon: 'magnet' }); }
+$('#snapBtn').onclick = toggleSnap;
+$('#themeBtn').onclick = () => { P.theme = P.theme === 'dark' ? 'light' : 'dark'; applyTheme(); savePrefs(); };
+$('#shotBtn').onclick = () => {
+  const vis = [selOutline.g.visible, hovOutline.g.visible]; selOutline.g.visible = hovOutline.g.visible = false;
+  renderer.render(scene, camera);
+  const a = document.createElement('a'); a.href = renderer.domElement.toDataURL('image/png'); a.download = 'atelier-room.png'; a.click();
+  [selOutline.g.visible, hovOutline.g.visible] = vis;
+  $('#flash').classList.remove('go'); void $('#flash').offsetWidth; $('#flash').classList.add('go');
+  toast('Screenshot saved', { icon: 'camera' });
+};
+$('#exportBtn').onclick = () => {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(JSON.parse(snapshot()), null, 2)], { type: 'application/json' }));
+  a.download = 'atelier-room.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); toast('Design exported', { icon: 'download' });
+};
+$('#importBtn').onclick = () => $('#importFile').click();
+$('#importFile').addEventListener('change', async ev => {
+  const f = ev.target.files[0]; ev.target.value = ''; if (!f) return;
+  try { const s = JSON.parse(await f.text()); if (!Array.isArray(s.items)) throw 0; applySnapshot(s); commit(); toast('Design imported', { icon: 'upload', action: 'Undo', onAction: undo }); }
+  catch { toast("That file isn't an Atelier design", { icon: 'x' }); }
+});
+const modal = $('#modal');
+$('#helpBtn').onclick = () => modal.hidden = false;
+$('#modalClose').onclick = () => modal.hidden = true;
+modal.addEventListener('click', ev => { if (ev.target === modal) modal.hidden = true; });
+$('#panelToggle').onclick = () => document.body.classList.toggle('panel-open');
+function togglePlay() { playing = !playing; $('#playBtn').innerHTML = icon(playing ? 'pause' : 'play'); }
+$('#playBtn').onclick = togglePlay;
+$('#timeSlider').addEventListener('input', ev => setTime(+ev.target.value));
+$('#timeSlider').addEventListener('change', savePrefs);
+
+/* keyboard */
+addEventListener('keydown', ev => {
+  if (ev.target.matches('input[type=text], input[type=search]')) { if (ev.key === 'Escape') ev.target.blur(); return; }
+  const mod = ev.ctrlKey || ev.metaKey, k = ev.key.toLowerCase();
+  if (mod && k === 'z') { ev.preventDefault(); ev.shiftKey ? redo() : undo(); return; }
+  if (mod && k === 'y') { ev.preventDefault(); redo(); return; }
+  if (mod && k === 'd') { ev.preventDefault(); duplicate(selected); return; }
+  if (mod) return;
+  if (k === 'escape') { if (!modal.hidden) modal.hidden = true; else select(null); }
+  else if ((k === 'delete' || k === 'backspace') && selected) remove(selected);
+  else if (k === 'q') rotate(ev.shiftKey ? 15 : 45);
+  else if (k === 'e') rotate(ev.shiftKey ? -15 : -45);
+  else if (k === 'f' && selected) focusOn(selected);
+  else if (k === 'g') toggleSnap();
+  else if (k === 'w') cycleWalls();
+  else if (k === 'p') togglePlay();
+  else if (k === '?') modal.hidden = !modal.hidden;
+  else if (['1', '2', '3', '4'].includes(k)) setView(['3d', 'top', 'front', 'eye'][+k - 1]);
+  else if (k.startsWith('arrow') && selected) {
+    ev.preventDefault();
+    const f = new V3(); camera.getWorldDirection(f); f.y = 0;
+    const fw = Math.abs(f.x) > Math.abs(f.z) ? new V3(Math.sign(f.x), 0, 0) : new V3(0, 0, Math.sign(f.z)), rt = new V3(-fw.z, 0, fw.x), st = ev.shiftKey ? .25 : .05;
+    const m = { arrowup: fw, arrowdown: fw.clone().negate(), arrowright: rt, arrowleft: rt.clone().negate() }[k];
+    selected.t.x += m.x * st; selected.t.z += m.z * st; clampFloor(selected); syncTransformUI(); commitSoon();
+  }
+});
+
+/* ================= boot ================= */
+const LIVING = [
+  { type: 'rug', x: .2, z: .45 }, { type: 'sofa', x: .2, z: 1.75, rot: Math.PI }, { type: 'coffeeTable', x: .2, z: .45 },
+  { type: 'tvUnit', x: .2, z: -2.79 }, { type: 'armchair', x: -2.3, z: .35, rot: Math.PI / 2 }, { type: 'floorLamp', x: -2.9, z: 1.95 },
+  { type: 'plant', x: 2.95, z: -2.45 }, { type: 'bookshelf', x: 3.34, z: .6, rot: -Math.PI / 2 }, { type: 'nightstand', x: 1.65, z: 2.2, name: 'Side table' },
+];
+applyTheme(); syncWalls(); $('#snapBtn').classList.toggle('on', P.snap); setTime(P.time); $('#playBtn').innerHTML = icon('play');
+renderCatalog(); resize();
+const saved = store.get('atelier.scene');
+try { applySnapshot(saved || { room: R, light: L, items: LIVING }); }
+catch { applySnapshot({ room: R, light: L, items: LIVING }); }
+history.current = snapshot(); updateUndo();
+const span = Math.max(R.w, R.d);
+camera.position.setFromSpherical(new THREE.Spherical(span * 2.2 + 5, .6, Math.PI / 4 + 1.1));
+controls.target.set(0, .5, 0); controls.update();
+setView('3d'); camTween.dur = 1.8;
+renderer.setAnimationLoop(frame);
+requestAnimationFrame(() => $('#loader').classList.add('done'));
+if (!store.get('atelier.seen')) { setTimeout(() => toast('Drag furniture to move it · press ? for shortcuts'), 2000); store.set('atelier.seen', 1); }
 </script>
 </body>
 </html>
